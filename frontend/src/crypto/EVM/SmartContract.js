@@ -138,7 +138,7 @@ class SmartContract {
        console.log('creating limit order')
 
        try {
-        await this.makeLimitOrder_matic(orderData)
+        await this.swapTokensMatic(orderData)
 
         try {
             console.log('creating limit order 2')
@@ -158,14 +158,14 @@ class SmartContract {
     }
 
 
-    async makeLimitOrder_matic(orderData){
+    async swapTokensMatic(orderData){
         const provider = await this._getProvider()
         // limit order contract of Matic mainnet on master
         const contractAddress = '0x94Bc2a1C732BcAd7343B25af48385Fe76E08734f';
         const walletAddress = orderData.walletAddress;
         const chainId = 137;
         console.log(contractAddress, orderData, 'createOrder')
-        console.log(provider, 'provider')
+        console.log(-(18 - orderData.decimalsOfMakerAsset), '-(18 - orderData.decimalsOfMakerAsset)')
 
         const web3 = new Web3(provider.provider.provider);
 
@@ -178,9 +178,10 @@ class SmartContract {
 
         let totalAmount = null;
 
-        // usdc, todo: make more flexible
-        if (orderData.makerAssetAddress === '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174') {
-            totalAmount = web3.utils.toWei(orderData.takerAmount, "ether" ).slice(0, -12)
+        // toWei adding 18 decimals, amount for polygon should be in matic (18 dec)
+        if (orderData.decimalsOfMakerAsset < 18) {
+            const decimals = -(18 - orderData.decimalsOfMakerAsset)
+            totalAmount = web3.utils.toWei(orderData.takerAmount, "ether" ).slice(0, decimals)
         } else {
             totalAmount = web3.utils.toWei(orderData.takerAmount, "ether" )
         }
@@ -236,9 +237,10 @@ class SmartContract {
                     from: walletAddress
                 });
 
+                console.log(gasLimit, 'gasLimit')
+
                 return {
                     ...transaction,
-                    gas: gasLimit
                 };
             }
 

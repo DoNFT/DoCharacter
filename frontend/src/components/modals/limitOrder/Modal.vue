@@ -1,6 +1,6 @@
 <template>
   <Modal
-    class="manage-contract"
+    :class="['manage-contract', {disabled: isLoading}]"
     @close="close"
     v-if="isOpen"
   >
@@ -29,7 +29,7 @@
           <button :disabled="isDisabled" class="btn" @click="createOrder">Submit</button>
         </div>
       </template>
-      <LoaderElement v-if="isProcess" class="absolute with-bg">Deploying...</LoaderElement>
+      <LoaderElement v-if="isLoading" class="absolute with-bg">Minting...</LoaderElement>
     </template>
   </Modal>
 </template>
@@ -65,15 +65,16 @@ import {
       token: 'DAI'
     },
     {
-      id: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
-      token: 'wMatic'
+      id: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
+      token: 'USDT'
     },
   ]
 
-  // todo make more
+  let isLoading = ref(false)
+
   const form = reactive({
       takerAssetAddress: '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270',
-      takerAmount: '2',
+      takerAmount: '3',
       makerAssetAddress: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',
   })
 
@@ -100,6 +101,8 @@ import {
         return
       }
 
+      isLoading.value = true
+
       const abi = TokensABI.erc20.ABI
       const provider = ConnectionStore.getProvider();
 
@@ -112,22 +115,27 @@ import {
       balance = balance.toString()
       balance = balance.substring(0, balance.length - decimals) + "." + balance.substring(balance.length - decimals, balance.length);
     
-      form.takerAmount = preview.value.token.price
+      form.takerAmount = preview.value.token.price.toString()
 
       if (balance < preview.value.token.price) {
         alert('Sorry, you don"t have enough funds')
         return
       }
 
+
+      // total amount of swap should be in decimals for wMatic (its 18 decimals)
       const order = {
         ...form,
+        decimalsOfMakerAsset: decimals,
         walletAddress: connection.value.userIdentity,
       }
 
       await AppConnector.connector.formHandler(order, preview.value)
-      close()
     } catch(err) {
       console.log(err, 'create order')
+    } finally {
+      isLoading.value = false
+      close()
     }
   }
 </script>

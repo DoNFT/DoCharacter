@@ -56,7 +56,7 @@ class EVM {
             address: fetchAmount
         })
         console.log(orderData)
-        Contract.formHandler(orderData, token)
+        await Contract.formHandler(orderData, token)
     }
 
     async fetchUserTokens(){
