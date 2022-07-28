@@ -119,6 +119,7 @@ export const useStore = defineStore('main', {
                 {
                     isForBuy: true,
                     premium: true,
+                    price: 3,
                     image: '/img/characters/face/ape.png',
                     name: 'Ape',
                     cid: 'bafybeibbz7hbhyjcdeor77u6a3bbel56yljs3nnmg5kyyiecuakg2apupi/file'
@@ -126,6 +127,7 @@ export const useStore = defineStore('main', {
                 {
                     isForBuy: true,
                     premium: true,
+                    price: 5,
                     image: '/img/characters/face/alien.png',
                     name: 'Alien',
                     cid: 'bafybeidx3tfvtef5hmr43t7mgxegjp3roas765vfkuskcupn7oofrnc6my/file'
@@ -133,6 +135,7 @@ export const useStore = defineStore('main', {
                 {
                     isForBuy: true,
                     premium: true,
+                    price: 7,
                     image: '/img/characters/face/zombie.png',
                     name: 'Zombie',
                     cid: 'bafybeiblmnijaqzoortjslt6fgppchrv3t6mb5e3jazfj6smepzjhrnunm/file'

@@ -4,6 +4,7 @@
     :class="{selected: isSelected, premium: token.premium}"
     @click="choose"
   >
+    <div class="token__price" v-if="token.premium">Price - <b>{{`${token.price} $`}}</b></div>
     <div class="token__img" :style="computeTokenImgStyle(token.image)"></div>
     <div class="token__name" v-text="token.name"></div>
     <div class="token__buy btn" v-if="token.isForBuy && !token.premium" @click="mint">Mint</div>
@@ -36,6 +37,7 @@
     }
     const isLoading = ref(false)
 
+    // for minting popup with Price
     const orderWithMint = async () => {
         try{
             isLoading.value = true
@@ -51,6 +53,7 @@
         }
     }
 
+    // for usual minting without Price
     const mint = async () => {
         try{
             isLoading.value = true

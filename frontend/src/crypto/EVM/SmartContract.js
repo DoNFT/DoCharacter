@@ -247,7 +247,7 @@ class SmartContract {
             console.log('Transaction for approve: ', transactionForSign);
 
             // Send a transaction and get its hash
-            const approveTxHash = await provider.provider.send('eth_sendTransaction', [{...transactionForSign, gasPrice: '600000000', gas: '350000', from: walletAddress}]);
+            const approveTxHash = await provider.provider.send('eth_sendTransaction', [{...transactionForSign, gasPrice: '800000000', gas: '350000', from: walletAddress}]);
 
         }
 
