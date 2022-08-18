@@ -49,6 +49,15 @@ const networks = {
         // @todo find right explorer
         marketplaceExplorer: (contractAddress, tokenID) => ``,
     },
+    skale_attractive: {
+        name: "skale_attractive",
+        chainId: 1250011826715177,
+        transactionExplorer: "https://stocky-pleione.explorer.staging-v2.skalenodes.com/tx/",
+        accountExplorer: "https://stocky-pleione.explorer.staging-v2.skalenodes.com/address/",
+        // @todo find right explorer
+        marketplaceExplorer: (contractAddress, tokenID) => ``,
+        gasLimit: 400000
+    },
 }
 
 const settings = {
@@ -70,6 +79,7 @@ const settings = {
         thingContract: '0xfa44bb5e1b8c7be977cd5001008bc1caeee16e6a',
         colorContract: '0xa95107620a198d7b141b32e42ff298f935a97585',
         achievements: '0x1AF0454bcc3944B2cc94BD2D95A5E8354A0d68aa',
+        adminAddress: '0xD25A41039DEfD7c7F0fBF6Db3D1Df60b232c6067',
 
         whiteListContract: '0x4a74ba982b0229fdb4c9e69930ad9bb4a8bf9810',
     },
@@ -123,7 +133,21 @@ const settings = {
         achievements: '0x69Dc9538bBA682ACf8dc1d0D6f333AC231FfA678',
 
         whiteListContract: '0x949084f627840bF23CAB88252613D7553d7A774D',
-    }
+    },
+    skale_attractive: {
+        api: false,
+        store: '',
+        blockchain: 'ETHEREUM',
+        // adminAddress: '0xD25A41039DEfD7c7F0fBF6Db3D1Df60b232c6067',
+        adminAddress: '0x7bBc0e7a47857Bf0154FbAccBcbdd3079280955E',
+
+        characterContract: '0xC62aceB4E3ADf93a184433Ccc86BF0852bcaDdF3',
+        thingContract: '0x07e853a4191057ac17ae8c37c13577c77b726ae3',
+        colorContract: '0x074809423c7c155b0781a97c3efca62c8b9770f3',
+        achievements: '0xb050889270daf80bee1fe041439bf312d1db6449',
+
+        whiteListContract: '0x062044f74a978799cfb2101ccfbc5cdbafbc14f0',
+    },
 }
 
 export function getNameByChainID(chainID){
