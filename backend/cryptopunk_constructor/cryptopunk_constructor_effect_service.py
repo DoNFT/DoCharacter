@@ -9,13 +9,12 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 
-from common.api.effects.services.base_effect_service import BaseEffectService
 
+class CryptopunkConstructorEffectService:
 
-class CryptopunkConstructorEffectService(BaseEffectService):
-
-    def __init__(self):
-        ...
+    async def transform(self, contents: List, params: Optional[Dict] = None):
+        result = self._perform_transformation(contents, params)
+        return result
 
     def _perform_transformation(
             self, contents: List, params: Optional[Dict] = None,
@@ -60,12 +59,14 @@ class CryptopunkConstructorEffectService(BaseEffectService):
         draw = ImageDraw.Draw(punk_image)
         number = self.create_number(number)
         draw.text((0, 0), number, (0, 0, 0), font=font)
-        return imageio.imwrite("<bytes>", punk_image, "png")
+        return imageio.imwrite("<bytes>", np.array(punk_image), "png")
 
     @staticmethod
     def create_number(number):
+        number = int(number)
         if number >= 1000000:
             return f'{number // 1000000}kk'
         elif number >= 1000:
             return f'{number // 1000}k'
-        else: return number
+        else:
+            return str(number)

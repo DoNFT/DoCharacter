@@ -3,6 +3,8 @@ from pathlib import Path
 
 import environs
 
+from ipfs.service import IPFSServiceEnum
+
 
 class Environment(Enum):
     DEV = "DEV"
@@ -14,11 +16,6 @@ class ServiceEffect(Enum):
     ANIMATION = "ANIMATION"
     STYLE_TRANSFER = "STYLE_TRANSFER"
     CRYPTOPUNK = "CRYPTOPUNK"
-
-
-class IPFSServiceEnum(Enum):
-    PINATA = "PINATA"
-    NFT_STORAGE = "NFT_STORAGE"
 
 
 PROJECT_DIR = Path(__file__).parent.parent.resolve()

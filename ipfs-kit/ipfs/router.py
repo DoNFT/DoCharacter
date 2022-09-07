@@ -1,4 +1,6 @@
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter
+from fastapi import File
+from fastapi import UploadFile
 from starlette.responses import Response
 
 from .service import ipfs_service
@@ -38,6 +40,12 @@ async def cat(ipfs_addr: str):
     """
     cid = ipfs_service.extract_cid(ipfs_addr)
     if cid is None:
-        raise ValueError(f'Cannot extract cid from {ipfs_addr}')
+        cid = ipfs_addr
     payload = await ipfs_service.cat(cid)
     return Response(content=payload, media_type="application/octet-stream")
+
+
+@router.get("/check_mimetype")
+async def check_mimetype(url: str) -> str:
+    content_type = await ipfs_service.get_meta_info(url, info_key='content-type')
+    return content_type
