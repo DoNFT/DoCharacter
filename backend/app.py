@@ -1,7 +1,13 @@
+from fastapi import APIRouter
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from common.api.router import router as api_router
+from cryptopunk_constructor.router import router as effect_router
+from ipfs.router import router as ipfs_router
+
+router = APIRouter(prefix="/api")
+router.include_router(effect_router)
+router.include_router(ipfs_router)
 
 app = FastAPI()
 
@@ -13,4 +19,4 @@ app.add_middleware(
     allow_headers=["Content-Type", "Accept", "Origin"],
 )
 
-app.include_router(api_router)
+app.include_router(router)

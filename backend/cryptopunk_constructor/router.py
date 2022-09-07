@@ -10,7 +10,7 @@ from data_types import AddNumberPayload
 from data_types import ApplyEffectPayload
 from data_types import UploadPayload
 
-router = APIRouter(prefix="/api/effects")
+router = APIRouter(prefix="/effects")
 
 
 @router.post("/applyEffect")
