@@ -58,6 +58,15 @@ const networks = {
         marketplaceExplorer: (contractAddress, tokenID) => ``,
         gasLimit: 400000
     },
+    bsc_testnet: {
+        name: "bsc_testnet",
+        chainId: 97,
+        transactionExplorer: "https://testnet.bscscan.com/tx/",
+        accountExplorer: "https://testnet.bscscan.com/address/",
+        // @todo find right explorer
+        marketplaceExplorer: (contractAddress, tokenID) => ``,
+        gasLimit: 400000
+    }
 }
 
 const settings = {
@@ -148,6 +157,20 @@ const settings = {
 
         whiteListContract: '0x062044f74a978799cfb2101ccfbc5cdbafbc14f0',
     },
+    bsc_testnet: {
+        api: false,
+        store: '',
+        blockchain: 'ETHEREUM',
+        // adminAddress: '0xc4C6403B8761550319e6D00fc8febc0e9Cc8BeF3',
+        adminAddress: '0xB9f48fd8fdA9c353a61c34AC9F2feA35A9AB3eeA',
+
+        characterContract: '0x4438797659A677C249ae58427D013C15d2A4FA5A',
+        thingContract: '0x438CE1e9A3701fe9012dAB7Ce42D073ED86d2e4B',
+        colorContract: '0x2Ccb9a2B36F997A64466b4eD4229C635F9bB53ac',
+        achievements: '0xE13D87772b6D728D84c32D971A62D930A804e70F',
+
+        whiteListContract: '0x6d16BD9F0320F284225e9E634495a1f03Fc7e5B8',
+    }
 }
 
 export function getNameByChainID(chainID){
