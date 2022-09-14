@@ -6,9 +6,9 @@ from cryptopunk_constructor.base_effect_router import generate_content
 from cryptopunk_constructor.base_effect_router import response_content
 from cryptopunk_constructor.base_effect_router import service
 from cryptopunk_constructor.base_effect_router import upload_content
-from data_types import AddNumberPayload
-from data_types import ApplyEffectPayload
-from data_types import UploadPayload
+from cryptopunk_constructor.data_types import AddNumberPayload
+from cryptopunk_constructor.data_types import ApplyEffectPayload
+from cryptopunk_constructor.data_types import UploadPayload
 
 router = APIRouter(prefix="/effects")
 
