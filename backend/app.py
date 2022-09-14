@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from cryptopunk_constructor.router import router as effect_router
-from ipfs.router import router as ipfs_router
+from router_ipfs import router as ipfs_router
 
 router = APIRouter(prefix="/api")
 router.include_router(effect_router)

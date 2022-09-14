@@ -3,8 +3,6 @@ from pathlib import Path
 
 import environs
 
-from ipfs.service import IPFSServiceEnum
-
 
 class Environment(Enum):
     DEV = "DEV"
@@ -16,6 +14,16 @@ class ServiceEffect(Enum):
     ANIMATION = "ANIMATION"
     STYLE_TRANSFER = "STYLE_TRANSFER"
     CRYPTOPUNK = "CRYPTOPUNK"
+    CRYPTOPUNK_CONSTRUCTOR = "CRYPTOPUNK_CONSTRUCTOR"
+    CARICATURE = "CARICATURE"
+    CIRCUS = "CIRCUS"
+    FACE_ANIMATION = "FACE_ANIMATION"
+    DYNAMIC_NFT_AVATAR = "DYNAMIC_NFT_AVATAR"
+
+
+class IPFSServiceEnum(Enum):
+    PINATA = "PINATA"
+    NFT_STORAGE = "NFT_STORAGE"
 
 
 PROJECT_DIR = Path(__file__).parent.parent.resolve()
@@ -55,4 +63,5 @@ IPFS_API_TIMEOUT = env.float("IPFS_API_TIMEOUT", default=30.0)
 PINATA_JWT_TOKEN = env("PINATA_JWT_TOKEN", default=None)
 IPFS_SERVICE = env.enum("IPFS_SERVICE", type=IPFSServiceEnum, ignore_case=True, default="PINATA")
 NFT_STORAGE_API_TOKEN = env("NFT_STORAGE_API_TOKEN", default=None)
-ETH_NODE = env.str("ETH_NODE")
+MAILER_LITE_API_KEY = env("MAILERLITE_API_KEY", default=None)
+ETH_NODE = env.str("ETH_NODE", default=None)
