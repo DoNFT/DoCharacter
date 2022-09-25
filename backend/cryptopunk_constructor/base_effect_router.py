@@ -15,10 +15,11 @@ from ipfs.service import get_ipfs_service
 from settings import ETH_NODE
 from settings import IPFS_API_TIMEOUT
 from settings import IPFS_SERVICE
+from settings import NFT_STORAGE_API_TOKEN
 
 web3_service = get_service_cls()(ETH_NODE)
 service = CryptopunkConstructorEffectService()
-ipfs_service = get_ipfs_service(IPFS_API_TIMEOUT, IPFS_SERVICE)
+ipfs_service = get_ipfs_service(IPFS_API_TIMEOUT, IPFS_SERVICE, NFT_STORAGE_API_TOKEN)
 
 
 class GenerationImageError(Exception):
