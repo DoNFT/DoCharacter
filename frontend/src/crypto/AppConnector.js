@@ -1,4 +1,5 @@
 import Rarible from "@/crypto/EVM/rarible";
+import NearConnector from "@/crypto/near";
 import {ErrorList} from "@/crypto/helpers";
 
 const AppConnector = {
@@ -24,6 +25,11 @@ const AppConnector = {
         if(connectorType === 'rarible'){
             this.type = 'rarible'
             this.connector = new Rarible()
+            await this.connector.init()
+        }
+        else if(connectorType === 'near'){
+            this.type = 'near'
+            this.connector = new NearConnector()
             await this.connector.init()
         }
 

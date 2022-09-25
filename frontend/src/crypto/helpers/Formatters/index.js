@@ -3,6 +3,7 @@ export function contractFormat({
    tokens = [],
    name = null,
    symbol = null,
+   type = 'undefined',
 }){
     // console.log(arguments)
    return {
@@ -11,7 +12,7 @@ export function contractFormat({
       symbol: symbol || '',
       tokens,
        isUpdating: false,
-       type: 'undefined'    // CollectionType.(...)
+       type    // CollectionType.(...)
    }
 }
 

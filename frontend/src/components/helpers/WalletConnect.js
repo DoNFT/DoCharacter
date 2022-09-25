@@ -65,7 +65,6 @@ export function useWalletConnection(){
             // can`t close
         },
         setNetwork: value => {
-            console.log(value);
             network.value = value
         },
         setWallet: value => wallet.value = value,

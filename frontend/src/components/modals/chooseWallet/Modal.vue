@@ -75,7 +75,7 @@
   import Modal from '@/components/UI/Modal'
   import LoaderElement from '@/components/UI/Loader'
   import {useWalletConnection} from "@/components/helpers/WalletConnect";
-  import {ref} from "vue";
+  import {ref, watch} from "vue";
   import AppConnector from '@/crypto/AppConnector'
   import {ConnectorTypes} from '@/crypto/helpers'
 
@@ -91,6 +91,14 @@
       setWallet,
       submitAvailable
   } = useWalletConnection()
+
+  watch(selectedNetwork, async (newValue) => {
+      const network = networks.value.find(w => w.id === newValue)
+      if (network && network.key === 'near') {
+          isConnecting.value = true
+          await (await AppConnector.init(ConnectorTypes.NEAR)).connector.connectToWallet()
+      }
+  })
 
   const isConnecting = ref(false)
 

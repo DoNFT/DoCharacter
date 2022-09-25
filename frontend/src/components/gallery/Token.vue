@@ -21,7 +21,7 @@
     import LoaderElement from '@/components/UI/Loader'
     import {ref} from "vue";
     import {useStore} from "@/store/main";
-    import {getErrorTextByCode} from "@/crypto/helpers";
+    import {ConnectorTypes, getErrorTextByCode} from "@/crypto/helpers";
 
     const store = useStore()
     const props = defineProps({
@@ -58,12 +58,17 @@
         try{
             isLoading.value = true
 
-            const {transactionHash} = await AppConnector.connector.mintTestToken(props.token)
-            TrnView
-                .open({hash: transactionHash})
-                .onClose(async () => {
-                    await AppConnector.connector.updateContractTokensList([props.token.contractAddress])
-                })
+            if (AppConnector.type === ConnectorTypes.NEAR) {
+                await AppConnector.connector.mintTestToken(props.token)
+            }
+            else {
+                const {transactionHash} = await AppConnector.connector.mintTestToken(props.token)
+                TrnView
+                    .open({hash: transactionHash})
+                    .onClose(async () => {
+                        await AppConnector.connector.updateContractTokensList([props.token.contractAddress])
+                    })
+            }
         }
         catch (e) {
             console.log('Mint test error', e)

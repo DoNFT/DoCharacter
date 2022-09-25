@@ -25,7 +25,8 @@ const codes = {
     NOT_CONNECTED: '2003',
     TURN_ON_BLIND_SIGN: '2004',
     USER_REJECTED_TRANSACTION: '2005',
-    HAVE_SPECIAL_ROLE: '2006'
+    HAVE_SPECIAL_ROLE: '2006',
+    MEDIA_TYPE_NOT_SUPPORTED: '2050',
 }
 
 export default codes
