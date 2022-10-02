@@ -2,7 +2,7 @@ import AppAPI, {HTTP} from "@/utils/API";
 import ConnectionStore from "@/crypto/helpers/ConnectionStore";
 import TokenRoles from "@/crypto/helpers/TokenRoles"
 import {catToFixed, shortCat} from "@/utils/string";
-import {Token} from "@/crypto/helpers";
+import {DecentralizedStorage, Token} from "@/crypto/helpers";
 
 // export async function applyAssets(original, modifiers, assetType = 'things'){
 export async function applyAssets({contractAddress, tokenID, contentUrl}, modifiers, assetType = 'things'){
@@ -50,6 +50,16 @@ export async function applyAssets({contractAddress, tokenID, contentUrl}, modifi
             responseType: 'blob'
         }
     )
+
+    if(assetType === 'things') {
+        // because applyEffect does not save to IPFS anymore
+        const url = await DecentralizedStorage.loadFile(blobImage)
+        return {
+            url,
+            blob: URL.createObjectURL(blobImage),
+            cid: headers.contenturl.split('://')[1]
+        }
+    }
 
     return {
         url: `https://ipfs.io/${headers.contenturl.replace(':/', '')}`,

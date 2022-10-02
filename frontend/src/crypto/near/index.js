@@ -29,6 +29,9 @@ import {
     Token, DecentralizedStorage
 } from "@/crypto/helpers";
 import SmartContract from "@/crypto/EVM/SmartContract";
+import TrnView from "@/utils/TrnView";
+import alert from "@/utils/alert";
+import symbolKeys from "@/utils/symbolKeys";
 
 class NearConnector {
 
@@ -86,12 +89,38 @@ class NearConnector {
                 location.reload()
             })
 
+            this.checkTransactions()
+
             log('User connected', accountId)
-            router.replace({query: undefined})
+            // router.replace({query: undefined})
             this.fetchUserTokens()
         }
         else log('User not connected')
         return true
+    }
+
+    async checkTransactions() {
+        const tx_hash = this.haveTransactionInURL()
+        if(tx_hash){
+            const {isSuccess, callAction} = await this.readTransaction(tx_hash)
+            if(isSuccess){
+                if(callAction === 'mint'){
+                    const savedAction = this.getSavedProcess()
+                    if(savedAction){
+                        this.clearSavedProcess()
+                        TrnView.open({hash: tx_hash})
+                    }
+                }
+                else if(['add_token_to_bundle', 'remove_token_from_bundle', 'remove_token_from_bundle_metadata', 'add_token_to_bundle_metadata'].includes(callAction)){
+                    TrnView.open({hash: tx_hash})
+                }
+            }
+        }
+
+        const tx_error = this.haveTransactionErrorURL()
+        if(tx_error){
+            alert.open(tx_error.message)
+        }
     }
 
     nearProvider = null
@@ -196,8 +225,9 @@ class NearConnector {
         }
     }
 
-    async fetchUserTokens(){
+    async fetchUserTokens({withUpdate = true} = {}){
         const store = AppStorage.getStore()
+        if (!withUpdate && store.getCollections.length) return store.getCollections
         store.changeCollectionLoadingState(true)
 
         // const resultContracts = new Set()
@@ -283,8 +313,7 @@ class NearConnector {
                     // limit: 30
                 }
             )
-
-            return tokens.map(token => {
+            const computedTokens = tokens.map(token => {
                 return Formatters.tokenFormat({
                     id: token.token_id,
                     contractAddress,
@@ -294,9 +323,16 @@ class NearConnector {
                     specificAdditionFields: {
                         approved_account_ids: token.approved_account_ids,
                         insideTokens: token.bundles
-                    }
+                    },
+                    originTokenObject: token
                 })
             })
+
+            for await (const token of computedTokens) {
+                token.structure = await this.getWrappedTokensObjectList(token)
+            }
+
+            return computedTokens
         }
         catch (e) {
             log('getTokensFromContract Error', e)
@@ -305,7 +341,6 @@ class NearConnector {
     }
 
     async getContractWithTokens(contractAddress, type = null){
-        console.log('getContractWithTokens', contractAddress, type);
         try {
             const tokens = await this.getTokensFromContract(contractAddress)
 
@@ -355,7 +390,7 @@ class NearConnector {
             // let contractsList = []
             // if(tokenType === 'user') contractsList = await this.getUserTokens();
             // else if(tokenType === 'effect') contractsList = await this.getUserEffects();
-            const contractsList = await this.getUserTokens();
+            const contractsList = await this.fetchUserTokens({withUpdate: false});
             const contract = contractsList.find(c => c.address === contractAddress)
             if(contract) return contract.tokens.find(t => t.id === tokenID)
         }
@@ -467,9 +502,11 @@ class NearConnector {
                         callAction = 'deploy_collection'
                         break
                     case 'add_token_to_bundle':
+                    case 'add_token_to_bundle_metadata':
                         callAction = 'add_token_to_bundle'
                         break
                     case 'remove_token_from_bundle':
+                    case 'remove_token_from_bundle_metadata':
                         callAction = 'remove_token_from_bundle'
                         break
                     default:
@@ -508,57 +545,6 @@ class NearConnector {
     async mintNFT(tokensForBundle, bundleData, bundleContractAddress){
         log('mintNFT', tokensForBundle, bundleData);
         const store = AppStorage.getTokensStore()
-
-        const tokensForBundleDetail = []
-        const tokensForBundleShort = []
-
-        for await (const tokenShort of tokensForBundle){
-            const [contractName, tokenID] = tokenShort.identity.split(':')
-            const token = await this.getTokenByIdentity(tokenShort.identity)
-
-            tokensForBundleDetail.push({
-                approval_id: token.approved_account_ids[bundleContractAddress] || 0,
-                approved_account_ids: token.approved_account_ids,
-                contract: contractName,
-                token_id: tokenID,
-                token_role: tokenShort.role,
-                metadata: {
-                    ...token
-                }
-            })
-
-            tokensForBundleShort.push({
-                contract: contractName,
-                tokens: [tokenID]
-            })
-        }
-
-        log('newTokensForBundle', tokensForBundleDetail)
-
-        store.setProcessStatus(ActionTypes.minting_bundle)
-
-        const bundleContract = await getBundleContractInstance(bundleContractAddress)
-        try{
-            const objectForBundle = {
-                tokens_for_approve: tokensForBundle.length,
-                account_for_approve: bundleContractAddress,
-                contract_of_tokens: tokensForBundleShort,
-                token_id: `token-${Date.now()}`,
-                metadata: {
-                    title: bundleData.name,
-                    description: bundleData.description,
-                    media: bundleData.image,
-                    link: bundleData.link,
-                    copies: 1
-                },
-                bundles: tokensForBundleDetail,
-                owner_id: ConnectionStore.getUserIdentity()
-            }
-            await bundleContract.nft_bundle_with_approve(objectForBundle, this.attachedGas, this.nearGas)
-        }
-        catch (e){
-            log('Error nft_bundle', e);
-        }
     }
 
     async getBundleContracts(){
@@ -579,44 +565,96 @@ class NearConnector {
         return returnContractsList.map(contract => ({key: contract.contractAddress, value: contract.contractAddress}))
     }
 
-
-    async applyAssetsToToken(original, modifiers, assetType = 'things') {
-        console.log('applyAssetsToToken', assetType, original);
-        console.log(modifiers);
+    async generateBundleMediaCover(original, modifiers, assetType = 'things') {
         const storage = AppStorage.getStore()
 
-        const allInsideTokens = original.structure
-            .map(Token.computeModifyObject)
-            .concat(modifiers.map(Token.computeModifyObject))
-
-        const resultModifiersForImage = allInsideTokens
+        const applyStyles = modifiers
             .filter(token => {
                 const isFind = storage.findContractObject(token.contractAddress)
                 return isFind && token.tokenRole !== TokenRoles.Original && isFind.contract.type !== CollectionType.ACHIEVEMENTS || false
             })
+            .map(Token.computeModifyObject)
 
-        const originImage = original.originImage || original.image
+        const originMetadataObject = original[Symbol.for(symbolKeys.TOKEN_ORIGIN)]
+        const originImage = originMetadataObject.metadata.media
 
-        let {url, blob, cid} = await Token.applyAssets(
+        return await Token.applyAssets(
             {
                 contractAddress: original.contractAddress,
                 tokenID: original.id,
                 contentUrl: originImage
             },
-            resultModifiersForImage,
+            applyStyles,
             assetType
         )
+    }
 
-        const metaCID = await DecentralizedStorage.loadJSON({
-            name: original.name,
-            description: original.description,
-            link: original.link,
-            image: url,
-            originImage
-        })
+    async applyAssetsToToken(original, modifiers, assetType = 'things') {
+        if(!original.structure.length){
+            return await this.createBundle(original, modifiers, assetType)
+        }
 
-        const computedTokenList = Token.addTokenRole(Token.transformIdentitiesToObjects(modifiers.map(t => t.identity)))
+        const baseToken = original.structure.find(token => token.tokenRole === TokenRoles.Original)
+        const allModifiers = original.structure.filter(token => token.tokenRole !== TokenRoles.Original).concat(modifiers)
+        const {url} = await this.generateBundleMediaCover(baseToken, allModifiers, assetType)
 
+        const newMetadata = {
+            ...original[Symbol.for(symbolKeys.TOKEN_ORIGIN)].metadata,
+            media: url
+        }
+
+        const tokens = modifiers.map(token => ({
+            contract: token.contractAddress,
+            token_id: token.id,
+            approval_id: token[Symbol.for(symbolKeys.TOKEN_ORIGIN)].approved_account_ids[original.contractAddress] || 0,
+            token_role: TokenRoles.NoRole,
+            owner_id: original.contractAddress
+        }))
+
+        const tokensToApprove = modifiers.map(token => token.id)
+
+        const contract = await getBundleContractInstance(original.contractAddress)
+        await contract.add_token_to_bundle_metadata(
+            {
+                token_to_add_data: tokens,
+                tokens_to_approve: tokensToApprove,
+                bundle_token_id: original.id,
+                owner_id: original.contractAddress,
+                metadata: newMetadata
+            },
+            this.attachedGas,
+            this.nearGas
+        )
+    }
+
+    async removeAssetsFromBundle(original, tokenForRemoving, assetType = 'things') {
+        if (TokenRoles.nonRemoved.includes(tokenForRemoving.tokenRole)) throw Error(ErrorList.HAVE_SPECIAL_ROLE)
+
+        const baseToken = original.structure.find(token => token.tokenRole === TokenRoles.Original)
+        const modifiers = original.structure.filter(token => token.tokenRole !== TokenRoles.Original && !stringCompare(token.identity, tokenForRemoving.identity))
+        const {url} = await this.generateBundleMediaCover(baseToken, modifiers, assetType)
+
+        const newMetadata = {
+            ...original[Symbol.for(symbolKeys.TOKEN_ORIGIN)].metadata,
+            media: url
+        }
+
+        const contract = await getBundleContractInstance(original.contractAddress)
+        await contract.remove_token_from_bundle_metadata(
+            {
+                remove_token_data: {
+                    approval_id: 0,
+                    contract: tokenForRemoving.contractAddress,
+                    token_id: tokenForRemoving.id,
+                    token_role: tokenForRemoving.tokenRole,
+                    owner_id: original.contractAddress
+                },
+                bundle_token_id: original.id,
+                metadata: newMetadata
+            },
+            this.attachedGas,
+            '1'
+        )
     }
 
     async mintTestToken(data){
@@ -658,7 +696,6 @@ class NearConnector {
 
         store.setProcessStatus(ActionTypes.minting_token)
         const contract = await getContractInstance(contractAddress)
-        // const contract = await this.getCustomContract(contractAddress)
         try{
             await contract.nft_mint(objectForMinting, this.attachedGas, this.nearGas)
         }
@@ -668,13 +705,13 @@ class NearConnector {
         }
     }
 
-    async getWrappedTokensObjectList(tokenID, contractAddress){
-        const token = await this.getTokenByIdentity(`${contractAddress}:${tokenID}`)
+    // async getWrappedTokensObjectList(tokenID, contractAddress){
+    async getWrappedTokensObjectList(token){
         const insideTokens = []
         for await(let tempTokenShort of token.insideTokens){
             const allTokensFromContract = await this.getAccount().then(account => {
                 // account.viewFunction(tempTokenShort.contract, 'nft_tokens_for_owner', { account_id: contracts.bundle.contractName, limit: 30 })
-                return account.viewFunction(tempTokenShort.contract, 'nft_tokens_for_owner', { account_id: contractAddress })
+                return account.viewFunction(tempTokenShort.contract, 'nft_tokens_for_owner', { account_id: token.contractAddress })
             })
             const findToken = allTokensFromContract.find(token => token.token_id === tempTokenShort.token_id)
             if(findToken){
@@ -688,19 +725,20 @@ class NearConnector {
                         approved_account_ids: findToken.approved_account_ids,
                         insideTokens: findToken.bundles,
                         tokenRole: tempTokenShort.token_role
-                    }
+                    },
+                    originTokenObject: findToken,
                 }))
             }
         }
         return insideTokens
     }
 
-    async unwrap(tokenID, contractAddress) {
+    async unbundleToken({contractAddress, id}) {
         const contract = await getBundleContractInstance(contractAddress)
 
         try {
             contract.nft_unbundle(
-                {token_id: tokenID},
+                {token_id: id},
                 this.attachedGas,
                 '1'
             )
@@ -719,33 +757,77 @@ class NearConnector {
     * @param {object} ?image - instance of Blob (File)
     * @return {object} like {transactionResult, provider}
     * */
-    // async makeTokensBundle({tokens, meta, image = null}, bundleContractAddress){
-    //     log('makeTokensBundle')
-    //     const store = AppStorage.getTokensStore()
-    //     store.setProcessStatus(ActionTypes.wrapping_tokens)
-    //     const tokensForBundle = tokens.map(token => ({
-    //         identity: token,
-    //         role: TokenRoles.NoRole
-    //     }))
-    //     log('tokensForBundle', tokensForBundle);
-    //
-    //     const bundleImage = await computeMediaForToken(image)
-    //     log('bundleImage', bundleImage);
-    //
-    //     const bundleData = {
-    //         ...meta,
-    //         image: bundleImage
-    //     }
-    //     log('bundleData', bundleData);
-    //     store.setProcessStatus(ActionTypes.uploading_meta_data)
-    //
-    //     saveBeforeAction('makeBundle', {
-    //         tokensForBundle,
-    //         bundleData
-    //     })
-    //
-    //     await this.mintNFT(tokensForBundle, bundleData, bundleContractAddress)
-    // }
+    async createBundle(original, modifiers, assetType){
+        log('makeTokensBundle')
+        const store = AppStorage.getStore()
+        store.setProcessStatus(ActionTypes.wrapping_tokens)
+
+        const {url: generatedMediaLink} = await this.generateBundleMediaCover(original, modifiers, assetType)
+
+        // const bundleImage = await computeMediaForToken(image)
+        // log('bundleImage', bundleImage);
+
+        // const bundleData = {
+        //     ...meta,
+        //     image: bundleImage
+        // }
+        // log('bundleData', bundleData);
+        // store.setProcessStatus(ActionTypes.uploading_meta_data)
+
+        // saveBeforeAction('makeBundle', {
+        //     tokensForBundle,
+        //     bundleData
+        // })
+
+        const tokensForBundleDetail = []
+        const tokensForBundleShort = []
+
+        for await (const token of [original, ...modifiers]){
+            tokensForBundleDetail.push({
+                approval_id: token.approved_account_ids[original.contractAddress] || 0,
+                approved_account_ids: token.approved_account_ids,
+                contract: token.contractAddress,
+                token_id: token.id,
+                token_role: stringCompare(token.identity, original.identity)? TokenRoles.Original : TokenRoles.NoRole,
+                owner_id: original.contractAddress,
+                metadata: {
+                    ...token
+                }
+            })
+
+            tokensForBundleShort.push({
+                contract: token.contractAddress,
+                tokens: [token.id]
+            })
+        }
+
+        log('newTokensForBundle', tokensForBundleDetail)
+
+        store.setProcessStatus(ActionTypes.minting_bundle)
+
+        const bundleContract = await getBundleContractInstance(original.contractAddress)
+        try{
+            const objectForBundle = {
+                tokens_for_approve: modifiers.length + 1,
+                account_for_approve: original.contractAddress,
+                contract_of_tokens: tokensForBundleShort,
+                token_id: `token-${Date.now()}`,
+                metadata: {
+                    title: original.name,
+                    description: original.description,
+                    media: generatedMediaLink,
+                    link: original.link,
+                    copies: 1
+                },
+                bundles: tokensForBundleDetail,
+                owner_id: ConnectionStore.getUserIdentity()
+            }
+            await bundleContract.nft_bundle_with_approve(objectForBundle, this.attachedGas, this.nearGas)
+        }
+        catch (e){
+            log('Error nft_bundle', e);
+        }
+    }
 
 
     async sendNFT(tokenObject, toAddress) {
@@ -889,7 +971,7 @@ class NearConnector {
         return storage.whiteList
     }
 
-    async removeContractFromAllowEffectList(address){
+    async removeContractFromWhiteList(address){
         const contract = await getWhiteListContractInstance()
         await contract.remove_effect_contract_from_list(
             {effect_info_address: address},
@@ -898,7 +980,7 @@ class NearConnector {
         )
     }
 
-    async addContractToAllowEffectList({contractType, contractAddress, serverUrl, owner, onlyFor}){
+    async addContractToWhiteList({type, contractAddress, serverUrl, owner, onlyFor}){
         const contract = await getWhiteListContractInstance()
 
         await contract.add_effect_contract_to_list(
@@ -908,7 +990,7 @@ class NearConnector {
                     owner_id: owner,
                     original_contract: contractAddress,
                     modificators_contract: onlyFor || null,
-                    collection_type: contractType
+                    collection_type: CollectionType.getTypeByEnumNumber(type)
                 }
             },
             this.attachedGas,
@@ -937,582 +1019,3 @@ class NearConnector {
 }
 
 export default NearConnector
-
-/*import * as API from 'near-api-js'
-
-import contracts from "@/crypto/near/contracts";
-import {clearSavedProcess, getSavedProcess, saveBeforeAction} from "@/crypto/near/beforeActionStore";
-import axios from "axios";
-import {AppStorage, ConnectionStore, Networks} from "@/crypto/helpers";
-import alert from "@/utils/alert";
-import {getTokensByAccountId} from "@/crypto/near/API";
-
-class NearConnector {
-
-    nearGas = "100000000000000000000000"
-
-    nearInstance = null
-    walletConnection = null
-    accountId = null
-    account = null
-
-    constructor(){
-
-    }
-
-    async disconnect(){
-        this.walletConnection.signOut()
-        setTimeout(() => location.reload())
-    }
-
-    async connectToWallet(){
-        console.log('Login to near')
-        const res = this.walletConnection.requestSignIn(contracts.character.contractName, 'do[NFT] app')
-        console.log(res);
-    }
-
-    async init(){
-        if(this.walletConnection) return this.accountId
-        console.log('Init near')
-
-        const connectOptions = {
-            deps: {
-                keyStore: new API.keyStores.BrowserLocalStorageKeyStore()
-            },
-            ...contracts.character
-        }
-        const near = await API.connect(connectOptions)
-        this.nearInstance = near
-        const networkName = `near_${near.connection.networkId}`
-
-        const walletConnection = new API.WalletConnection(near)
-        this.walletConnection = walletConnection
-        const accountId = walletConnection.getAccountId() || null
-        this.accountId = accountId
-
-
-        if(accountId){
-            console.log('User connected', accountId)
-            ConnectionStore.setConnection({
-                network: {
-                    name: networkName,
-                    id: null
-                },
-                userIdentity: accountId,
-                disconnectMethod: () => this.disconnect()
-            })
-            setTimeout(() => {
-                window.history.replaceState({}, document.title, '/')
-                this.fetchUserTokens()
-            })
-        }
-        else {
-            console.log('User not connected')
-        }
-
-        return true
-    }
-
-    nearProvider = null
-    getNearProvider(){
-        if(!this.nearProvider) {
-            this.nearProvider = new API.providers.JsonRpcProvider(
-                contracts.character.nodeUrl
-            )
-        }
-        return this.nearProvider
-    }
-
-    cachedContractsInstance = {}
-    async getContractInstance(contractName){
-        if(!this.cachedContractsInstance[contractName]){
-            const contractOptions = contracts[contractName]
-            const connectOptions = {
-                deps: {
-                    keyStore: new API.keyStores.BrowserLocalStorageKeyStore()
-                },
-                ...contractOptions
-            }
-            const near = await API.connect(connectOptions)
-            const wallet = new API.WalletConnection(near)
-
-            this.cachedContractsInstance[contractName] = await new API.Contract(
-                wallet.account(),
-                contractOptions.contractName,
-                {
-                    // View methods are read only. They don't modify the state, but usually return some value.
-                    viewMethods: ['nft_total_supply', 'nft_tokens_for_owner'],
-                    // Change methods can modify the state. But you don't receive the returned value when called.
-                    changeMethods: ['nft_mint', 'nft_transfer', 'nft_approve', 'nft_bundle', 'nft_unbundle'],
-                }
-            )
-        }
-        return this.cachedContractsInstance[contractName]
-    }
-
-    contractInstanceBundle = null
-    async getBundleContract(){
-        if(!this.contractInstanceBundle){
-            const connectOptions = {
-                deps: {
-                    keyStore: new API.keyStores.BrowserLocalStorageKeyStore()
-                },
-                ...contracts.bundle
-            }
-            const near_bundle = await API.connect(connectOptions)
-            const wallet = new API.WalletConnection(near_bundle)
-
-            this.contractInstanceBundle = await new API.Contract(
-                wallet.account(),
-                contracts.bundle.contractName,
-                {
-                    changeMethods: ['nft_mint', 'nft_bundle', 'nft_unbundle', 'nft_approve', 'nft_transfer'],
-                }
-            )
-        }
-        return this.contractInstanceBundle
-    }
-
-
-    async isUserConnected(){
-        const identity = this.getUserIdentity()
-        if(!identity) throw new Error('USER_NOT_CONNECTED')
-        return identity
-    }
-
-
-
-    async fetchUserTokens() {
-        const storage = AppStorage.getStore()
-        storage.changeCollectionLoadingState(true)
-        const resultContracts = new Set()
-
-        let userContracts = []
-        const accountID = ConnectionStore.getUserIdentity()
-        try{
-            userContracts = await getTokensByAccountId(accountID)
-        }
-        catch (e) {
-            storage.changeCollectionLoadingState(false)
-            throw new Error('NETWORK_ERROR')
-        }
-
-        // compute default contracts (bundle, effect, test)
-        const defaultContracts = []
-
-        const whiteList = await this.getWhiteList({withUpdate: true})
-        const bundleContracts = this.getFromWhiteList(whiteList, contractTypeList.bundle)
-        const styleContracts = this.getFromWhiteList(whiteList, contractTypeList.style)
-        const tokenContracts = this.getFromWhiteList(whiteList, contractTypeList.other)
-
-        if(bundleContracts.length) defaultContracts.push(...bundleContracts.map(contract => contract.contractAddress))
-        if(styleContracts.length) defaultContracts.push(...styleContracts.map(contract => contract.contractAddress))
-        if(tokenContracts.length) defaultContracts.push(...tokenContracts.map(contract => contract.contractAddress))
-    }
-
-    async createNFT(image, effectObject){
-      const originImage = await this.putFileToIpfs(image)
-      let applyEffectResponse = null
-      try{
-        applyEffectResponse = await axios.post(process.env.VUE_APP_API_ENDPOINT + '/effects/applyEffect', {
-            contentUrl: originImage,
-            actor_name: effectObject.id + '',
-            // original: {
-            //   contract: '0x00',
-            //   tokenId: '0',
-            //   contentUrl: originImage
-            // },
-            // modificator: {
-            //   contract: '0x00',
-            //   tokenId: '0',
-            //   contentUrl: effectObject.image
-            // },
-            // sender: this.getUserIdentity()
-          },
-          {
-            responseType: 'blob'
-          })
-      }
-      catch (e){
-        console.log(e);
-        throw new Error('API')
-      }
-      if(applyEffectResponse && applyEffectResponse.data){
-
-        const objectForMinting = {
-          token_id: `NFT-${Date.now()}`,
-          metadata: {
-            title: `do1inchship`,
-            description: 'Especially for @1inch and @ShipyardSW NYC party from @DoNFTio',
-            media: applyEffectResponse.headers.contenturl.replace('ipfs://', 'https://ipfs.io/ipfs/'),
-            link: process.env.VUE_APP_COLLECTION_URL
-          },
-          receiver_id: this.getUserIdentity()
-        }
-
-        saveBeforeAction('mintSelfie', objectForMinting)
-        localStorage.setItem('near-process-minted-result', JSON.stringify(objectForMinting))
-
-        const contract = await this.getContractInstance(contracts.selfie.contractName)
-        try{
-          await contract.nft_mint(objectForMinting, "300000000000000", this.nearGas)
-        }
-        catch (e){
-          console.log('nft minting error', e)
-        }
-      }
-      else throw new Error('API')
-    }
-
-    async startMinting(image, effectObject){
-        localStorage.setItem('near-process-selected-effect', JSON.stringify(effectObject))
-        try{
-            await this.makeSelfieNFT(image)
-        }
-        catch(e) {
-            console.log('makeSelfieNFT Error', e)
-            throw new Error('MAKE_SELFIE')
-        }
-    }
-
-    async handleMintProcess(setScreen, setStep, stepList, setMintingResult){
-      console.log('handleMintProcess')
-      const tx_hash = this.haveTransactionInURL()
-      if(tx_hash){
-          console.log(tx_hash)
-          const {isSuccess, callAction} = await this.readTransaction(tx_hash)
-          if(isSuccess){
-              setScreen(stepList.StepFour)
-
-              // /-*if(callAction === 'mint'){
-              //     const savedAction = this.getSavedProcess()
-              //     if(savedAction){
-              //         if(savedAction.action === 'mintSelfie'){
-              //             setStep('2/5 Minting style')
-              //             await this.duplicateEffect();
-              //         }
-              //         else if(savedAction.action === 'mintEffect'){
-              //             setStep('3/5 Approve selfie')
-              //             await this.approveSelfie();
-              //         }
-              //     }
-              // }
-              // else if(callAction === 'approve'){
-              //     const savedAction = this.getSavedProcess()
-              //     if(savedAction.action === 'approveSelfie'){
-              //         setStep('4/5 Approve effect')
-              //         await this.approveEffect();
-              //     }
-              //     else if(savedAction.action === 'approveEffect'){
-              //         setStep('5/5 Generating new NFT')
-              //         await this.applyEffectToToken();
-              //     }
-              // }
-              else *-/
-              // if(callAction === 'bundle'){
-              if(callAction === 'mint'){
-                  const {image, explorer, tokenID, marketplaceExplorer} = this.getMintedBundle()
-                  console.log(this.getNetworkName());
-                  const savedAction = this.getSavedProcess()
-                  console.log(savedAction);
-                  const market = marketplaceExplorer(contracts.selfie.contractName, savedAction.token_id)
-                  setMintingResult(image, explorer + tx_hash, tokenID, market)
-                  setScreen(stepList.StepFive, stepList.StepSix)
-                  // this.clearSavedSteps()
-              }
-          }
-      }
-
-      const tx_error = this.haveTransactionErrorURL()
-      if(tx_error){
-          console.log('tx_error', tx_error);
-          alert.open(tx_error.message)
-      }
-    }
-
-    async makeSelfieNFT(image){
-        console.log('makeSelfieNFT', image)
-
-        let bundleImage = null
-        if(image instanceof Blob) {
-            bundleImage = await this.putFileToIpfs(image)
-        }
-        else throw Error('MAKE_SELFIE')
-        console.log('NFT image', bundleImage);
-
-        const objectForMinting = {
-            token_id: `selfie-${Date.now()}`,
-            metadata: {
-                title: `Selfie-${Date.now()}`,
-                description: '',
-                media: bundleImage,
-                link: '',
-            },
-            receiver_id: this.getUserIdentity()
-        }
-
-        saveBeforeAction('mintSelfie', objectForMinting)
-        localStorage.setItem('near-process-minted-selfie', JSON.stringify(objectForMinting))
-
-        const contract = await this.getContractInstance(contracts.selfie.contractName)
-        try{
-            await contract.nft_mint(objectForMinting, "300000000000000", this.nearGas)
-        }
-        catch (e){
-            console.log('nft minting error', e)
-        }
-    }
-
-    async duplicateEffect(){
-        console.log('duplicateEffect')
-        const effectObject = JSON.parse(localStorage.getItem('near-process-selected-effect') || '{}')
-        console.log(effectObject);
-
-        let effectImageBlob = null
-        if(typeof effectObject.image === 'string'){
-            try{
-                effectImageBlob = await fetch(effectObject.image).then(r => r.blob())
-            }
-            catch(e) {
-                console.log('Load effect img error', e)
-                throw Error('EFFECT_LOAD_ERROR')
-            }
-        }
-        console.log('effectImageBlob', effectImageBlob);
-        let bundleImage = null
-        if(effectImageBlob instanceof Blob) {
-            bundleImage = await this.putFileToIpfs(effectImageBlob)
-        }
-        console.log('NFT image', bundleImage);
-        if(!bundleImage) throw Error('MAKE_EFFECT')
-
-        const objectForMinting = {
-            token_id: `effect-${Date.now()}`,
-            metadata: {
-                title: `Effect-${Date.now()}`,
-                description: '',
-                media: bundleImage,
-                link: '',
-            },
-            receiver_id: this.getUserIdentity()
-        }
-
-        saveBeforeAction('mintEffect', objectForMinting)
-        localStorage.setItem('near-process-minted-effect', JSON.stringify(objectForMinting))
-
-        const contract = await this.getContractInstance(contracts.effects.contractName)
-        try{
-            await contract.nft_mint(objectForMinting, "300000000000000", this.nearGas)
-        }
-        catch (e){
-            console.log('nft minting error', e)
-        }
-    }
-
-    async approveSelfie(){
-        let contractObject = await this.getContractInstance(contracts.selfie.contractName)
-        const selfieObject = JSON.parse(localStorage.getItem('near-process-minted-selfie') || '{}')
-        try{
-            const objectForApprove = {
-                account_id: contracts.bundle.contractName,  //  bundle contract name
-                token_id: selfieObject.token_id,            //  token ID
-            }
-            saveBeforeAction('approveSelfie', objectForApprove)
-            await contractObject.nft_approve(objectForApprove, "300000000000000", this.nearGas)
-        }
-        catch (e){
-            console.log('approve error', e);
-        }
-    }
-
-    async approveEffect(){
-        let contractObject = await this.getContractInstance(contracts.effects.contractName)
-        const selfieObject = JSON.parse(localStorage.getItem('near-process-minted-effect') || '{}')
-        try{
-            const objectForApprove = {
-                account_id: contracts.bundle.contractName,  //  bundle contract name
-                token_id: selfieObject.token_id,            //  token ID
-            }
-            saveBeforeAction('approveEffect', objectForApprove)
-            await contractObject.nft_approve(objectForApprove, "300000000000000", this.nearGas)
-        }
-        catch (e){
-            console.log('approve error', e);
-        }
-    }
-
-    async applyEffectToToken(){
-        const token = JSON.parse(localStorage.getItem('near-process-minted-selfie') || '{}')
-        const effect = JSON.parse(localStorage.getItem('near-process-minted-effect') || '{}')
-        console.log('applyEffectToToken', token, effect)
-
-        if(!token.metadata.media || !effect.metadata.media) throw new Error('IMG_NOT_EXIST')
-
-        const tokensInBundleDetails = {
-            original: {
-                contract: contracts.selfie.contractName,
-                tokenId: token.token_id,
-                contentUrl: token.metadata.media
-            },
-            modificator: {
-                contract: contracts.effects.contractName,
-                tokenId: effect.token_id,
-                contentUrl: effect.metadata.media
-            }
-        }
-        console.log('tokensInBundleDetails', tokensInBundleDetails);
-
-        let bundleImageStoredURL = null
-        try{
-            const {headers} = await axios.post(
-                process.env.VUE_APP_API_ENDPOINT + `/effects/applyEffect`,
-                {
-                    ...tokensInBundleDetails,
-                    sender: this.getUserIdentity()
-                })
-            if(typeof headers.contenturl === 'string') bundleImageStoredURL = `https://ipfs.io/${headers.contenturl.replace(':/', '')}`
-            else throw new Error()
-            // if(typeof result.data === 'string') bundleImage = `https://ipfs.io/${result.data.replace(':/', '')}`
-            // else throw new Error()
-        }
-        catch (e){
-            console.log('error', e);
-            throw new Error('APPLY_ERROR')
-        }
-        console.log('bundleImage', bundleImageStoredURL);
-
-        const newTokensForBundle = []
-        newTokensForBundle.push({
-            approval_id: 0,
-            approved_account_ids: {[contracts.bundle.contractName]: 0},
-            contract: contracts.selfie.contractName,
-            token_id: token.token_id,
-            metadata: {
-                address: token.token_id,
-                approved_account_ids: {[contracts.bundle.contractName]: 0},
-                attributes: {},
-                description: '',
-                id: token.token_id,
-                identity: `${contracts.selfie.contractName}:${token.token_id}`,
-                insideTokens: [],
-                image: token.metadata.media,
-                link: '',
-                name: token.metadata.title,
-            }
-        })
-        newTokensForBundle.push({
-            approval_id: 0,
-            approved_account_ids: {[contracts.bundle.contractName]: 0},
-            contract: contracts.effects.contractName,
-            token_id: effect.token_id,
-            metadata: {
-                address: effect.token_id,
-                approved_account_ids: {[contracts.bundle.contractName]: 0},
-                attributes: {},
-                description: '',
-                id: effect.token_id,
-                identity: `${contracts.effects.contractName}:${effect.token_id}`,
-                insideTokens: [],
-                image: effect.metadata.media,
-                link: '',
-                name: effect.metadata.title,
-            }
-        })
-
-        const objectForBundle = {
-            bundles: newTokensForBundle,
-            metadata: {
-                title: `Token-${Date.now()}`,
-                description: '',
-                media: bundleImageStoredURL,
-                link: '',
-                copies: 1
-            },
-            token_id: `token-${Date.now()}`,
-        }
-        console.log('bundleData', objectForBundle);
-        localStorage.setItem('near-process-minted-result', JSON.stringify(objectForBundle))
-
-        const bundleContract = await this.getBundleContract()
-        await bundleContract.nft_bundle(objectForBundle, "300000000000000", this.nearGas)
-    }
-
-    getMintedBundle(){
-        const resultToken = JSON.parse(localStorage.getItem('near-process-minted-result') || '{}')
-        console.log('resultToken', resultToken)
-        const {transactionExplorer, marketplaceExplorer} = Networks.getData(ConnectionStore.getNetwork().name)
-        return {
-            explorer: transactionExplorer,
-            image: resultToken.metadata.media,
-            marketplaceExplorer,
-            tokenID: resultToken.token_id
-        }
-    }
-
-    haveTransactionInURL(){
-        const url = new URL(document.location)
-        const hash = url.searchParams.get('transactionHashes')
-        window.history.replaceState({}, document.title, '/');
-        return hash
-    }
-    haveTransactionErrorURL(){
-        const url = new URL(document.location)
-        const errorCode = url.searchParams.get('errorCode')
-        const errorMessage = url.searchParams.get('errorMessage')
-        if(errorCode) {
-            const savedProcess = getSavedProcess()
-            const errorObject = {
-                code: errorCode,
-                message: errorMessage? decodeURIComponent(errorMessage) : errorCode,
-                savedProcess
-            }
-            return errorObject
-        }
-        else return undefined
-    }
-    async readTransaction(tx_hash){
-        console.log('readTransaction', tx_hash);
-        let isSuccess = false
-        let callAction = null
-        let trnResult = await this.getNearProvider().txStatus(tx_hash, this.getUserIdentity())
-        console.log('trnResult', trnResult);
-
-        if(trnResult && 'SuccessValue' in trnResult.status){
-            isSuccess = true
-            if(trnResult.transaction.actions[0] && trnResult.transaction.actions[0].FunctionCall){
-                switch(trnResult.transaction.actions[0].FunctionCall.method_name) {
-                    case 'nft_approve':
-                        callAction = 'approve'
-                        break
-                    case 'nft_bundle':
-                        callAction = 'bundle'
-                        break
-                    case 'nft_mint':
-                        callAction = 'mint'
-                        break
-                    default:
-                        callAction = null
-                }
-            }
-        }
-        console.log('result', isSuccess, callAction)
-        return {isSuccess, callAction}
-    }
-
-    getSavedProcess(){
-        return getSavedProcess()
-    }
-    clearSavedProcess(){
-        return clearSavedProcess()
-    }
-    clearSavedSteps(){
-        this.clearSavedProcess()
-        localStorage.removeItem('near-process-selected-effect')
-        localStorage.removeItem('near-process-minted-selfie')
-        localStorage.removeItem('near-process-minted-effect')
-        localStorage.removeItem('near-process-minted-result')
-    }
-}
-
-export default NearConnector
-*/

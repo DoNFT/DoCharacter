@@ -181,11 +181,12 @@ const settings = {
     },
     near_testnet: {
         api: 'https://proxy.devnet.neonlabs.org/solana',
+        adminAddress: 'mkrd.testnet',
 
-        characterContract: 'character.donft_test.testnet',
-        thingContract: 'items.donft_test.testnet',
-        colorContract: 'colors.donft_test.testnet',
-        achievements: 'achievements.donft_test.testnet',
+        characterContract: 'character2.donft_test.testnet',
+        thingContract: 'items2.donft_test.testnet',
+        colorContract: 'colors2.donft_test.testnet',
+        achievements: 'achievements2.donft_test.testnet',
 
         whiteListContract: 'dev-1664104716896-68351623310303',
     }
@@ -194,7 +195,6 @@ const settings = {
 export function getNameByChainID(chainID){
     const [name] = Object.entries(networks).find(([, data]) => data.chainId === chainID) || ['unknown']
     let isSupport = (name !== 'unknown')? !!+process.env[`VUE_APP_NETWORK_${name.toUpperCase()}_SUPPORT`] : false
-
     return isSupport? name : 'unknown'
 }
 

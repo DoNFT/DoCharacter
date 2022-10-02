@@ -54,15 +54,4 @@
             store.setAppReady()
         }
     })
-
-    // import {TokensABI} from '@/crypto/helpers'
-    // console.log(TokensABI);
-
-    // import CookiesModal from '@/components/LandingPage/CookiesModal'
-    // import WalletConnectQRModal from '@/components/LandingPage/WalletConnectQRModal.vue'
-    // import NotSupportedNetworkModal from '@/components/LandingPage/NotSupportedNetworkModal.vue'
-    // import Alert from '@/components/UI/Alert.vue'
-    // import Confirm from '@/components/UI/Confirm.vue'
-    // import TrnView from '@/components/UI/TrnView.vue'
-    // import alert from '@/utils/alert'
 </script>

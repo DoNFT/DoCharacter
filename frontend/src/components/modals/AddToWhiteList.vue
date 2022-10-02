@@ -55,6 +55,7 @@
   import AppConnector from "@/crypto/AppConnector";
   import TrnView from "@/utils/TrnView";
   import {CollectionType} from "@/utils/collection";
+  import {ConnectorTypes} from "@/crypto/helpers";
   const store = useStore()
 
   const {
@@ -84,14 +85,19 @@
       if(form.contractAddress.length && form.serverUrl.length && form.owner.length){
           isLoading.value = true
           try{
-              const {transactionHash: hash} = await AppConnector.connector.addContractToWhiteList(form)
-              TrnView
-                  .open({hash})
-                  .onClose(async () => {
-                      close()
-                      await AppConnector.connector.getWhiteList({withUpdate: true, withMeta: true})
-                      await AppConnector.connector.fetchUserTokens()
-                  })
+              if (AppConnector.type === ConnectorTypes.NEAR) {
+                  await AppConnector.connector.addContractToWhiteList(form)
+              }
+              else {
+                  const {transactionHash: hash} = await AppConnector.connector.addContractToWhiteList(form)
+                  TrnView
+                      .open({hash})
+                      .onClose(async () => {
+                          close()
+                          await AppConnector.connector.getWhiteList({withUpdate: true, withMeta: true})
+                          await AppConnector.connector.fetchUserTokens()
+                      })
+              }
           }
           catch (e) {
               console.log(e);

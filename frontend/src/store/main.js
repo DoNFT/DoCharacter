@@ -339,6 +339,7 @@ export const useStore = defineStore('main', {
         isAddToWhiteListOpen: false
     }),
     getters: {
+        getCollections: state => state.collections,
         getFilteredCollections: state => type => {
             switch (type) {
                 case CollectionType.CHARACTERS:
