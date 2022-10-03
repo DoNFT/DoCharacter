@@ -37,7 +37,7 @@ import ContractElement from '@/components/gallery/Contract'
 import LoaderElement from '@/components/UI/Loader'
 import AppConnector from "@/crypto/AppConnector";
 import alert from "@/utils/alert";
-import {getErrorTextByCode} from "@/crypto/helpers";
+import {ConnectorTypes, getErrorTextByCode} from "@/crypto/helpers";
 import TrnView from "@/utils/TrnView";
 
 const store = useStore()
@@ -70,22 +70,27 @@ const confirm = async () => {
         applying.value = true
         const assetType = preview.value.modifiers[0].type
 
-        const contractsNeedToUpdate = [preview.value.token.contractAddress]
-            .concat(selected.assets.map(token => token.contractAddress))
+        if (AppConnector.type === ConnectorTypes.NEAR) {
+            await AppConnector.connector.applyAssetsToToken(preview.value.token, selected.assets, assetType)
+        }
+        else {
+            const contractsNeedToUpdate = [preview.value.token.contractAddress]
+                .concat(selected.assets.map(token => token.contractAddress))
 
-        const {
-            transactionHash: hash,
-            tempImage
-        } = await AppConnector.connector.applyAssetsToToken(preview.value.token, selected.assets, assetType)
+            const {
+                transactionHash: hash,
+                tempImage
+            } = await AppConnector.connector.applyAssetsToToken(preview.value.token, selected.assets, assetType)
 
-        TrnView
-            .open({hash})
-            .onClose(async () => {
-                console.log('contractsNeedToUpdate', contractsNeedToUpdate);
-                emits('close')
-                if(preview.value.notOwner) window.location.reload()
-                else await AppConnector.connector.updateContractTokensList(contractsNeedToUpdate)
-            })
+            TrnView
+                .open({hash})
+                .onClose(async () => {
+                    console.log('contractsNeedToUpdate', contractsNeedToUpdate);
+                    emits('close')
+                    if(preview.value.notOwner) window.location.reload()
+                    else await AppConnector.connector.updateContractTokensList(contractsNeedToUpdate)
+                })
+        }
     }
     catch (e) {
         console.log('Make bundle test error', e)

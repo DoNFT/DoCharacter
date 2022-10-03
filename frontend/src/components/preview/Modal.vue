@@ -85,7 +85,7 @@
   import {CollectionType} from "@/utils/collection";
   import confirm from "@/utils/confirm";
 
-  import {Networks, ConnectionStore, getErrorTextByCode} from "@/crypto/helpers"
+  import {Networks, ConnectionStore, getErrorTextByCode, ConnectorTypes} from "@/crypto/helpers"
   import AppConnector from "@/crypto/AppConnector";
   import TrnView from "@/utils/TrnView";
   import alert from "@/utils/alert";
@@ -128,17 +128,22 @@
               try{
                   isPreviewLoading.value = true
 
-                  const {
-                      transactionHash: hash,
-                      tempImage
-                  } = await AppConnector.connector.unbundleToken(preview.value.token)
+                  if (AppConnector.type === ConnectorTypes.NEAR) {
+                      await AppConnector.connector.unbundleToken(preview.value.token)
+                  }
+                  else {
+                      const {
+                          transactionHash: hash,
+                          tempImage
+                      } = await AppConnector.connector.unbundleToken(preview.value.token)
 
-                  TrnView
-                      .open({hash})
-                      .onClose(async () => {
-                          close()
-                          await AppConnector.connector.fetchUserTokens()
-                      })
+                      TrnView
+                          .open({hash})
+                          .onClose(async () => {
+                              close()
+                              await AppConnector.connector.fetchUserTokens()
+                          })
+                  }
               }
               catch (e) {
                   console.log('unbundleToken error', e);
@@ -166,23 +171,28 @@
           async () => {
               try{
                   isPreviewLoading.value = true
-                  const assetType = preview.value.token.type
 
-                  const contractsNeedToUpdate = [preview.value.token.contractAddress, token.contractAddress]
+                  const assetType = preview.value.contract.type
 
-                  const {
-                      transactionHash: hash,
-                      tempImage
-                  } = await AppConnector.connector.removeAssetsFromBundle(preview.value.token, token, assetType)
+                  if (AppConnector.type === ConnectorTypes.NEAR) {
+                      await AppConnector.connector.removeAssetsFromBundle(preview.value.token, token, assetType)
+                  }
+                  else {
+                      const contractsNeedToUpdate = [preview.value.token.contractAddress, token.contractAddress]
+                      const {
+                          transactionHash: hash,
+                          tempImage
+                      } = await AppConnector.connector.removeAssetsFromBundle(preview.value.token, token, assetType)
 
-                  TrnView
-                      .open({hash})
-                      .onClose(async () => {
-                          console.log('contractsNeedToUpdate', contractsNeedToUpdate);
-                          close()
-                          if(preview.value.notOwner) window.location.reload()
-                          else await AppConnector.connector.updateContractTokensList(contractsNeedToUpdate)
-                      })
+                      TrnView
+                          .open({hash})
+                          .onClose(async () => {
+                              console.log('contractsNeedToUpdate', contractsNeedToUpdate);
+                              close()
+                              if(preview.value.notOwner) window.location.reload()
+                              else await AppConnector.connector.updateContractTokensList(contractsNeedToUpdate)
+                          })
+                  }
               }
               catch (e) {
                   console.log('removeFromBundle error', e);

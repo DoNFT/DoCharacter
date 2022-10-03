@@ -66,7 +66,15 @@ const networks = {
         // @todo find right explorer
         marketplaceExplorer: (contractAddress, tokenID) => ``,
         gasLimit: 400000
-    }
+    },
+    near_testnet: {
+        name: "near_testnet",
+        chainId: 0,
+        transactionExplorer: "https://explorer.testnet.near.org/transactions/",
+        accountExplorer: "https://explorer.testnet.near.org/accounts/",
+        marketplaceExplorer: (contractAddress, tokenID) => `https://testnet.mintbase.io/thing/${tokenID}:${contractAddress}`,
+        gasLimit: 400000
+    },
 }
 
 const settings = {
@@ -170,13 +178,23 @@ const settings = {
         achievements: '0xE13D87772b6D728D84c32D971A62D930A804e70F',
 
         whiteListContract: '0x6d16BD9F0320F284225e9E634495a1f03Fc7e5B8',
+    },
+    near_testnet: {
+        api: 'https://proxy.devnet.neonlabs.org/solana',
+        adminAddress: 'mkrd.testnet',
+
+        characterContract: 'character2.donft_test.testnet',
+        thingContract: 'items2.donft_test.testnet',
+        colorContract: 'colors2.donft_test.testnet',
+        achievements: 'achievements2.donft_test.testnet',
+
+        whiteListContract: 'dev-1664104716896-68351623310303',
     }
 }
 
 export function getNameByChainID(chainID){
     const [name] = Object.entries(networks).find(([, data]) => data.chainId === chainID) || ['unknown']
     let isSupport = (name !== 'unknown')? !!+process.env[`VUE_APP_NETWORK_${name.toUpperCase()}_SUPPORT`] : false
-
     return isSupport? name : 'unknown'
 }
 

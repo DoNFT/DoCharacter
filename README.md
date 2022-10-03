@@ -1,6 +1,6 @@
-# DoNFT-EthCC Hackathon Project
+# DoCharacter Hackathon Project
 
-## Try it here https://ethcc.donft.io/
+## Try it here https://char.donft.io/
 
 Сharacter generator which based on DoNFT protocol.
 - mint NFT-parts of characters
@@ -10,7 +10,7 @@
 
 
 
-## Presentation for EthCC
+## Pitch deck
 
 https://www.canva.com/design/DAFHUcdu0N0/AIRg3hbiTmsIPZGbYcRzuA/view?utm_content=DAFHUcdu0N0&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
 

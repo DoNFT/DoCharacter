@@ -35,6 +35,7 @@ export const useStore = defineStore('main', {
             {id: 6, name: 'NEON', key: 'neon', color: '#8247E5', available: true},
             {id: 7, name: 'Skale', key: 'skale', color: '#8247E5', available: true},
             {id: 8, name: 'BSC', key: 'bsc', color: '#8247E5', available: true},
+            {id: 9, name: 'Near', key: 'near', color: '#8247E5', available: true},
             // {id: 3, name: 'Optimizm', key: 'optimizm', color: '#8247E5', available: true},
             // {id: 3, name: 'Skale', key: 'skale', color: '#8247E5', available: true},
         ],
@@ -338,6 +339,7 @@ export const useStore = defineStore('main', {
         isAddToWhiteListOpen: false
     }),
     getters: {
+        getCollections: state => state.collections,
         getFilteredCollections: state => type => {
             switch (type) {
                 case CollectionType.CHARACTERS:

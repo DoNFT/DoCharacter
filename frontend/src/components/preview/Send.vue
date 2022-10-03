@@ -18,7 +18,7 @@
     import AppConnector from "@/crypto/AppConnector";
     import TrnView from "@/utils/TrnView";
     import alert from "@/utils/alert";
-    import {getErrorTextByCode} from "@/crypto/helpers";
+    import {ConnectorTypes, getErrorTextByCode} from "@/crypto/helpers";
 
     const address = ref('')
 
@@ -30,13 +30,18 @@
     const send = async () => {
         try{
             isSending.value = true
-            const {transactionHash: hash} = await AppConnector.connector.sendNFT(props.token, address.value)
-            TrnView
-                .open({hash})
-                .onClose(async () => {
-                    emits('close')
-                    await AppConnector.connector.updateContractTokensList([props.token.contractAddress])
-                })
+            if (AppConnector.type === ConnectorTypes.NEAR) {
+                await AppConnector.connector.sendNFT(props.token, address.value)
+            }
+            else {
+                const {transactionHash: hash} = await AppConnector.connector.sendNFT(props.token, address.value)
+                TrnView
+                    .open({hash})
+                    .onClose(async () => {
+                        emits('close')
+                        await AppConnector.connector.updateContractTokensList([props.token.contractAddress])
+                    })
+            }
         }
         catch (e) {
             console.log('Send error', e)

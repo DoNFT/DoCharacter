@@ -50,6 +50,7 @@
 
     import {useStore} from "@/store/main";
     import {storeToRefs} from "pinia";
+    import {ConnectorTypes} from "@/crypto/helpers";
 
     const props = defineProps({
         contract: Object
@@ -67,13 +68,18 @@
         confirm.open('Confirm remove', async () => {
             try{
                 isRemoving.value = true
-                const {transactionHash: hash} = await AppConnector.connector.removeContractFromWhiteList(props.contract.contractAddress)
-                TrnView
-                    .open({hash})
-                    .onClose(async () => {
-                        await AppConnector.connector.getWhiteList({withUpdate: true, withMeta: true})
-                        await AppConnector.connector.fetchUserTokens()
-                    })
+                if (AppConnector.type === ConnectorTypes.NEAR) {
+                    await AppConnector.connector.removeContractFromWhiteList(props.contract.contractAddress)
+                }
+                else {
+                    const {transactionHash: hash} = await AppConnector.connector.removeContractFromWhiteList(props.contract.contractAddress)
+                    TrnView
+                        .open({hash})
+                        .onClose(async () => {
+                            await AppConnector.connector.getWhiteList({withUpdate: true, withMeta: true})
+                            await AppConnector.connector.fetchUserTokens()
+                        })
+                }
             }
             catch (e) {
                 alert.open(e.message)

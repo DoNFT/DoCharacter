@@ -1,8 +1,11 @@
+import symbolKeys from "@/utils/symbolKeys";
+
 export function contractFormat({
    address,
    tokens = [],
    name = null,
    symbol = null,
+   type = 'undefined',
 }){
     // console.log(arguments)
    return {
@@ -11,7 +14,7 @@ export function contractFormat({
       symbol: symbol || '',
       tokens,
        isUpdating: false,
-       type: 'undefined'    // CollectionType.(...)
+       type    // CollectionType.(...)
    }
 }
 
@@ -22,7 +25,10 @@ export function tokenFormat({
     image = null,
     description = '',
     link = null,
-    originImage = null
+    originImage = null,
+    originTokenObject = null,
+    structure = [],
+    specificAdditionFields = {},
 }){
    if(image && image.startsWith('ipfs://ipfs/')) image = image.replace('ipfs://', 'https://ipfs.io/')
     const fieldsForView = []
@@ -39,7 +45,9 @@ export function tokenFormat({
       description,
       link,
        fieldsForView,
-       structure: [],
-       structureReady: false
+       structure,
+       structureReady: false,
+       ...specificAdditionFields,
+       [Symbol.for(symbolKeys.TOKEN_ORIGIN)]: originTokenObject
    }
 }
