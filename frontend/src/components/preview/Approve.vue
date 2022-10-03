@@ -18,7 +18,7 @@
     import AppConnector from "@/crypto/AppConnector";
     import TrnView from "@/utils/TrnView";
     import alert from "@/utils/alert";
-    import {getErrorTextByCode} from "@/crypto/helpers";
+    import {ConnectorTypes, getErrorTextByCode} from "@/crypto/helpers";
 
     const address = ref('')
 
@@ -30,12 +30,17 @@
     const approve = async () => {
         try{
             isApproving.value = true
-            const {transactionHash: hash} = await AppConnector.connector.makeAllow(props.token, address.value)
-            TrnView
-                .open({hash})
-                .onClose(async () => {
-                    emits('close')
-                })
+            if (AppConnector.type === ConnectorTypes.NEAR) {
+                await AppConnector.connector.makeAllow(props.token, address.value)
+            }
+            else {
+                const {transactionHash: hash} = await AppConnector.connector.makeAllow(props.token, address.value)
+                TrnView
+                    .open({hash})
+                    .onClose(async () => {
+                        emits('close')
+                    })
+            }
         }
         catch (e) {
             console.log('approve error', e)

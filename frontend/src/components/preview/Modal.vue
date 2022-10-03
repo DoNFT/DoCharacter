@@ -172,7 +172,8 @@
               try{
                   isPreviewLoading.value = true
 
-                  const assetType = preview.value.contract.type
+                  // when we remove token from character it will be token with type 'things' and when we remove token from thing it will be token with type 'color'
+                  const assetType = (preview.value.contract.type === 'characters')? 'things' : 'colors'
 
                   if (AppConnector.type === ConnectorTypes.NEAR) {
                       await AppConnector.connector.removeAssetsFromBundle(preview.value.token, token, assetType)

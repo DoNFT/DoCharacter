@@ -34,7 +34,8 @@ export async function getBundleContractInstance(contractAddress){
     return getContractInstance(
         contractAddress,
         {
-            changeMethods: ['nft_mint', 'nft_bundle', 'nft_bundle_with_approve', 'nft_unbundle', 'nft_approve', 'nft_transfer', 'remove_token_from_bundle', 'remove_token_from_bundle_metadata', 'add_token_to_bundle', 'add_token_to_bundle_metadata', 'bundle_metadata_update']
+            changeMethods: ['nft_mint', 'nft_bundle', 'nft_bundle_with_approve', 'nft_unbundle', 'nft_approve', 'nft_transfer', 'remove_token_from_bundle', 'remove_token_from_bundle_metadata', 'add_token_to_bundle', 'add_token_to_bundle_metadata', 'bundle_metadata_update'],
+            viewMethods: ['nft_tokens', 'nft_total_supply']
         }
     )
 }
