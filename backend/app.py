@@ -9,7 +9,7 @@ router = APIRouter(prefix="/api")
 router.include_router(effect_router)
 router.include_router(ipfs_router)
 
-app = FastAPI()
+app = FastAPI(title="EthCC")
 
 app.add_middleware(
     CORSMiddleware,
