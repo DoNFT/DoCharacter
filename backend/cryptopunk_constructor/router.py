@@ -55,7 +55,7 @@ async def change_color(effect_payload: ApplyEffectPayload):
 @router.post("/addNumber")
 async def add_number(add_number_payload: AddNumberPayload):
     check_token(add_number_payload.original.contract, add_number_payload.original.tokenId, add_number_payload.sender)
-    contents = await fetch_contents(add_number_payload.original.contentUrl)
+    contents = await fetch_contents([add_number_payload.original.contentUrl])
     punk_image = contents[0]
     punk = await service.add_number(punk_image, add_number_payload.number)
     ipfs_url = await upload_content(punk)
