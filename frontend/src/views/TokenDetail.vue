@@ -53,7 +53,7 @@
     import {onMounted, ref} from "vue";
     import AppConnector from "@/crypto/AppConnector";
     import {computeTokenImgStyle} from "@/utils/styles";
-    import {getErrorTextByCode, Token, TokenRoles} from "@/crypto/helpers";
+    import {ConnectorTypes, getErrorTextByCode, Token, TokenRoles} from "@/crypto/helpers";
     import confirm from "@/utils/confirm";
     import TrnView from "@/utils/TrnView";
     import alert from "@/utils/alert";
@@ -70,7 +70,10 @@
         try{
             const tokenIdentity = `${route.params.contractAddress}:${route.params.tokenID}`
             await AppConnector.connector.getWhiteList({withUpdate: true, withMeta: true})
-            token.value = await AppConnector.connector.getTokenByIdentity(tokenIdentity, true, true)
+            if (AppConnector.type === ConnectorTypes.NEAR) {
+                token.value = await AppConnector.connector.findTokenByIdentity(tokenIdentity)
+            }
+            else token.value = await AppConnector.connector.getTokenByIdentity(tokenIdentity, true, true)
         }
         catch (e) {
             tokenNotFound.value = true

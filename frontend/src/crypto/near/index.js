@@ -32,6 +32,7 @@ import SmartContract from "@/crypto/EVM/SmartContract";
 import TrnView from "@/utils/TrnView";
 import alert from "@/utils/alert";
 import symbolKeys from "@/utils/symbolKeys";
+import SymbolKeys from "@/utils/symbolKeys";
 
 class NearConnector {
 
@@ -90,6 +91,9 @@ class NearConnector {
             })
 
             this.checkTransactions()
+                .then(() => {
+                    router.replace({query: undefined})
+                })
 
             log('User connected', accountId)
             // router.replace({query: undefined})
@@ -313,25 +317,10 @@ class NearConnector {
                     // limit: 30
                 }
             )
-            const computedTokens = tokens.map(token => {
-                return Formatters.tokenFormat({
-                    id: token.token_id,
-                    contractAddress,
-                    name: token.metadata.title,
-                    image: token.metadata.media,
-                    description: token.metadata.description,
-                    specificAdditionFields: {
-                        approved_account_ids: token.approved_account_ids,
-                        insideTokens: token.bundles
-                    },
-                    originTokenObject: token
-                })
-            })
-
-            for await (const token of computedTokens) {
-                token.structure = await this.getWrappedTokensObjectList(token)
+            const computedTokens = []
+            for await (const token of tokens) {
+                computedTokens.push(await this.computedTokenObject(token, contractAddress))
             }
-
             return computedTokens
         }
         catch (e) {
@@ -359,40 +348,47 @@ class NearConnector {
         return Promise.all(contracts.map(contractAddress => this.getContractWithTokens(contractAddress)))
     }
 
-    /*async getTokensFromCustomContracts(alreadyLoadedContractsNames = []){
-        const customContracts = await customContractsStore.get(ConnectionStore.getNetwork().name)
-        if(customContracts.length){
-            try{
-                log('adding custom contracts', customContracts)
-                let filtered = customContracts.filter(name => !alreadyLoadedContractsNames.includes(name))
-                const computedCustomContracts = await this.getTokensFromContract(filtered)
-                log('receiving custom contracts', computedCustomContracts)
-                return computedCustomContracts
-            }
-            catch (e) {
-                log('getTokensFromCustomContracts', e);
-                store.changeContactsLoading(false)
-                throw e
-            }
-        }
-        return []
-    }*/
-
-    /*async getTokensFromContract(contracts = []){
-        return await this.getContractWithTokensList(contracts)
-    }*/
-
-    // async getTokenByIdentity(identity, tokenType = 'user'){
     async getTokenByIdentity(identity){
         log('Get token by identity', identity)
         const [contractAddress, tokenID] = identity.split(':')
         if(contractAddress && tokenID){
-            // let contractsList = []
-            // if(tokenType === 'user') contractsList = await this.getUserTokens();
-            // else if(tokenType === 'effect') contractsList = await this.getUserEffects();
             const contractsList = await this.fetchUserTokens({withUpdate: false});
             const contract = contractsList.find(c => c.address === contractAddress)
             if(contract) return contract.tokens.find(t => t.id === tokenID)
+        }
+        return null
+    }
+
+    async computedTokenObject(tokenOrigin, contractAddress, tokenRole = TokenRoles.NoRole) {
+        const tokenComputed = Formatters.tokenFormat({
+            id: tokenOrigin.token_id,
+            contractAddress,
+            name: tokenOrigin.metadata.title,
+            image: tokenOrigin.metadata.media,
+            description: tokenOrigin.metadata.description,
+            specificAdditionFields: {
+                approved_account_ids: tokenOrigin.approved_account_ids,
+                insideTokens: tokenOrigin.bundles,
+                tokenRole
+            },
+            originTokenObject: tokenOrigin
+        })
+        tokenComputed.structure = await this.getWrappedTokensObjectList(tokenComputed)
+        return tokenComputed
+    }
+
+    async findTokenByIdentity(identity) {
+        const [contractAddress, tokenID] = identity.split(':')
+        if(contractAddress && tokenID){
+            try{
+                const contract = await getBundleContractInstance(contractAddress)
+                const tokens = await contract.nft_tokens(0, 100)
+                const findToken = tokens.find(token => stringCompare(token.token_id, tokenID))
+                if (findToken) return await this.computedTokenObject(findToken, contractAddress)
+            }
+            catch (e) {
+                log('Find token error', e)
+            }
         }
         return null
     }
@@ -412,36 +408,6 @@ class NearConnector {
 
 
 
-
-
-    // async applyEffectToToken({token, effect, meta}, bundleContractAddress){
-    //     const store = AppStorage.getTokensStore()
-    //
-    //     store.setProcessStatus(ActionTypes.generating_media)
-    //     const { bundleData } = await applyEffect(token, effect, meta)
-    //     log('bundleData', bundleData);
-    //
-    //     store.setProcessStatus(ActionTypes.uploading_meta_data)
-    //
-    //     const tokensForBundle = [
-    //         {
-    //             identity: token.identity,
-    //             role: TokenRoles.Original
-    //         },
-    //         {
-    //             identity: effect.identity,
-    //             role: TokenRoles.Modifier
-    //         }
-    //     ]
-    //     log('tokensForBundle', tokensForBundle);
-    //
-    //     saveBeforeAction('applyEffect', {
-    //         tokensForBundle,
-    //         bundleData
-    //     })
-    //
-    //     await this.mintNFT(tokensForBundle, bundleData, bundleContractAddress)
-    // }
 
     // prevTransactionError = null
     haveTransactionErrorURL(){
@@ -515,7 +481,6 @@ class NearConnector {
                 }
             }
         }
-        log('result', isSuccess, callAction)
         router.replace({query: undefined})
         return {isSuccess, callAction, hash: tx_hash}
     }
@@ -714,21 +679,7 @@ class NearConnector {
                 return account.viewFunction(tempTokenShort.contract, 'nft_tokens_for_owner', { account_id: token.contractAddress })
             })
             const findToken = allTokensFromContract.find(token => token.token_id === tempTokenShort.token_id)
-            if(findToken){
-                insideTokens.push(Formatters.tokenFormat({
-                    id: findToken.token_id,
-                    contractAddress: tempTokenShort.contract,
-                    name: findToken.metadata.title,
-                    image: findToken.metadata.media,
-                    description: findToken.metadata.description,
-                    specificAdditionFields: {
-                        approved_account_ids: findToken.approved_account_ids,
-                        insideTokens: findToken.bundles,
-                        tokenRole: tempTokenShort.token_role
-                    },
-                    originTokenObject: findToken,
-                }))
-            }
+            if(findToken) insideTokens.push(await this.computedTokenObject(findToken, tempTokenShort.contract, tempTokenShort.token_role))
         }
         return insideTokens
     }
@@ -763,21 +714,6 @@ class NearConnector {
         store.setProcessStatus(ActionTypes.wrapping_tokens)
 
         const {url: generatedMediaLink} = await this.generateBundleMediaCover(original, modifiers, assetType)
-
-        // const bundleImage = await computeMediaForToken(image)
-        // log('bundleImage', bundleImage);
-
-        // const bundleData = {
-        //     ...meta,
-        //     image: bundleImage
-        // }
-        // log('bundleData', bundleData);
-        // store.setProcessStatus(ActionTypes.uploading_meta_data)
-
-        // saveBeforeAction('makeBundle', {
-        //     tokensForBundle,
-        //     bundleData
-        // })
 
         const tokensForBundleDetail = []
         const tokensForBundleShort = []
@@ -830,14 +766,31 @@ class NearConnector {
     }
 
 
+    async makeAllow(token, toAddress) {
+        return await this.approveTokenForOtherAccount(token, toAddress)
+    }
+
+    async approveTokenForOtherAccount({contractAddress, id}, toAddress) {
+        const contractObject = await getBundleContractInstance(contractAddress)
+        try{
+            const objectForApprove = {
+                account_id: toAddress,
+                token_id: id
+            }
+            await contractObject.nft_approve(objectForApprove, this.attachedGas, this.nearGas)
+        }
+        catch (e){
+            log('approve error', e);
+            throw new Error(ErrorList.TRN_COMPLETE)
+        }
+    }
+
     async sendNFT(tokenObject, toAddress) {
-        const store = AppStorage.getTokensStore()
+        const store = AppStorage.getStore()
         store.setProcessStatus(ActionTypes.check_address)
 
         if(stringCompare(toAddress, ConnectionStore.getUserIdentity())) throw new Error(ErrorList.THE_SAME_ADDRESS)
-        const [contractName, tokenID] = tokenObject.identity.split(':')
-        const {effectsContract: effectsContractName} = Networks.getSettings(ConnectionStore.getNetwork().name)
-        const token = await this.getTokenByIdentity(tokenObject.identity, (contractName === effectsContractName)? 'effect' : 'user')
+        const [tokenID] = tokenObject.identity.split(':')
 
         store.setProcessStatus(ActionTypes.sending_token)
 
@@ -854,37 +807,38 @@ class NearConnector {
             }
         )
 
-        const contractObject = (stringCompare(contractName, contracts.bundle.contractName))? await this.getBundleContract() : await this.getCustomContract(contractName)
-        if(toAddress in token.approved_account_ids){
+        const contractObject = await getBundleContractInstance(tokenObject.contractAddress)
+        // if(toAddress in token.approved_account_ids){
             log('token approved')
             try{
                 const transferObject = {
                     receiver_id: toAddress,
                     token_id: tokenID,
-                    approval_id: token.approved_account_ids[toAddress],
+                    approval_id: tokenObject[Symbol.for(SymbolKeys.TOKEN_ORIGIN)].approved_account_ids[toAddress] || 0,
                     memo: '',
                 }
                 contractObject.nft_transfer(transferObject, this.attachedGas, "1")
             }
             catch (e){
                 log(e);
+                console.log(e);
                 throw new Error(ErrorList.TRN_COMPLETE)
             }
-        }
-        else{
-            log('token not approve')
-            try{
-                const objectForApprove = {
-                    account_id: toAddress,
-                    token_id: tokenID
-                }
-                await contractObject.nft_approve(objectForApprove, this.attachedGas, this.nearGas)
-            }
-            catch (e){
-                log('approve error', e);
-                throw new Error(ErrorList.TRN_COMPLETE)
-            }
-        }
+        // }
+        // else{
+        //     log('token not approve')
+        //     try{
+        //         const objectForApprove = {
+        //             account_id: toAddress,
+        //             token_id: tokenID
+        //         }
+        //         await contractObject.nft_approve(objectForApprove, this.attachedGas, this.nearGas)
+        //     }
+        //     catch (e){
+        //         log('approve error', e);
+        //         throw new Error(ErrorList.TRN_COMPLETE)
+        //     }
+        // }
     }
 
     async addToBundle(addToTokenIdentity, tokenForAddList = []){

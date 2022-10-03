@@ -50,6 +50,7 @@
   import {storeToRefs} from "pinia";
   import {reactive, ref, watch} from "vue";
   import AppConnector from "@/crypto/AppConnector";
+  import {ConnectorTypes} from "@/crypto/helpers";
   const store = useStore()
   const close = () => {
       store.changeFindTokenView(false)
@@ -76,7 +77,12 @@
           tokenNotFound.value = false
           try{
               const tokenIdentity = `${newForm.contractAddress}:${newForm.tokenID}`
-              foundToken.value = await AppConnector.connector.getTokenByIdentity(tokenIdentity, true, false)
+              if (AppConnector.type === ConnectorTypes.NEAR) {
+                  foundToken.value = await AppConnector.connector.findTokenByIdentity(tokenIdentity)
+              }
+              else {
+                  foundToken.value = await AppConnector.connector.getTokenByIdentity(tokenIdentity, true, false)
+              }
           }
           catch (e) {
               console.log(e);
