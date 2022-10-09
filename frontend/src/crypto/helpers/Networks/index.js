@@ -23,6 +23,14 @@ const networks = {
         marketplaceExplorer: (contractAddress, tokenID) => `https://opensea.io/assets/matic/${contractAddress}/${tokenID}`,
         gasLimit: 400000
     },
+    metis_testnet: {
+        name: "metis_testnet",
+        chainId: 588,
+        transactionExplorer: "https://stardust-explorer.metis.io/tx/",
+        accountExplorer: "https://stardust-explorer.metis.io/address/",
+        marketplaceExplorer: (contractAddress, tokenID) => ``,
+        gasLimit: 400000
+    },
     sokol_testnet: {
         name: "sokol_testnet",
         chainId: 77,
@@ -99,6 +107,18 @@ const settings = {
         adminAddress: '0xD25A41039DEfD7c7F0fBF6Db3D1Df60b232c6067',
 
         whiteListContract: '0x4a74ba982b0229fdb4c9e69930ad9bb4a8bf9810',
+    },
+    metis_testnet: {
+        api: null,
+        store: 'https://testnets.opensea.io',
+        blockchain: 'ETHEREUM',
+        characterContract: '0xdb538623154643E44CA32B99E91AAd96f53dc8c5',
+        thingContract: '0x073a5C229bafA2b861B0caDdc1d9477ddA86514D',
+
+        colorContract: '0xf1ebDe325E92cCB779308AA33A1DD0326c8D7b9D',
+        achievements: '0x2a0e732a7F0f7b634DB85Fa336119caE4688c234',
+
+        whiteListContract: '0x5c2A61C4e2D13E33Daba5E5D636c45Cd1f7E93da',
     },
     sokol_testnet: {
         api: null,
