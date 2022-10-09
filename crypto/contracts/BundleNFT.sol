@@ -26,15 +26,15 @@ contract BundleNFT is
     Initializable,
     OwnableUpgradeable,
     ERC721URIStorageUpgradeable,
-    ERC721EnumerableUpgradeable
+    ERC721EnumerableUpgradeable,
+    IERC721ReceiverUpgradeable
 {
     mapping(uint256 => NFT[]) public bundles;
 
     EffectsAllowList public effectsAllowList;
     mapping(uint256 => uint256) public parentBundle;
     mapping(uint256 => mapping(address => bool)) modificationAllowances;
-    mapping(uint256 => uint256) modificationAllowancesLengths;
-    mapping(uint256 => mapping(uint256 => address)) modificationAllowancesEnumerated;
+    mapping(uint256 => address[]) modificationAllowancesEnumerated;
 
     event MintMessage(uint256 message);
 
@@ -54,6 +54,9 @@ contract BundleNFT is
     address payable public constant doNftWallet =
         payable(0x8fb1d5e8f4dda65302F904Cd8C7F3d09A1130E0d);
 
+    mapping(uint256 => uint256) unbundlePrice;
+    mapping(uint256 => address payable) creators;
+
     function initialize(string memory name_, string memory symbol_)
         public
         initializer
@@ -64,16 +67,17 @@ contract BundleNFT is
         __ERC721Enumerable_init();
     }
 
-    function bundle(NFT[] memory _tokens)
+    function bundleAndSetUnbundlePrice(NFT[] memory _tokens, uint256 _unbundlePrice)
         public
         payable
-        override
         returns (uint256)
     {
         checkAllowList(_tokens);
         _checkFees(CreateBundleFeeCoeff);
 
         uint256 tokenId = uint256(keccak256(abi.encode(_tokens)));
+        unbundlePrice[tokenId] = _unbundlePrice;
+        creators[tokenId] = payable(msg.sender);
         uint256 tokensLen = _tokens.length;
         for (uint256 i = 0; i < tokensLen; ) {
             _maybeSendFeeToEffectCreator(_tokens[i]);
@@ -93,14 +97,25 @@ contract BundleNFT is
         emit MintMessage(tokenId);
         return tokenId;
     }
+    function bundle(NFT[] memory _tokens)
+        public
+        payable
+        override
+        returns (uint256)
+    {
+        return bundleAndSetUnbundlePrice(_tokens, 0);
+    }
 
-    function mintItem(
+    function mintItemAndSetUnbundlePrice(
         address to,
         uint256 tokenId,
-        string memory uri
+        string memory uri,
+        uint256 _unbundlePrice
     ) public payable returns (uint256) {
-        require(!_exists(tokenId), "E01");
+        require(!_exists(tokenId));
         _checkFees(MintFeeCoeff);
+        unbundlePrice[tokenId] = _unbundlePrice;
+        creators[tokenId] = payable(msg.sender);
 
         _safeMint(to, tokenId);
         emit MintMessage(tokenId);
@@ -108,8 +123,15 @@ contract BundleNFT is
 
         return tokenId;
     }
+    function mintItem(
+        address to,
+        uint256 tokenId,
+        string memory uri
+    ) public payable returns (uint256) {
+        return mintItemAndSetUnbundlePrice(to, tokenId, uri, 0);
+    }
 
-    function mintItem(address to, string memory uri)
+    function mintItemAndSetUnbundlePrice(address to, string memory uri, uint256 _unbundlePrice)
         public
         payable
         returns (uint256)
@@ -118,7 +140,16 @@ contract BundleNFT is
         while (_exists(tokenId)) {
             tokenId += 1;
         }
-        return mintItem(to, tokenId, uri);
+        unbundlePrice[tokenId] = _unbundlePrice;
+        creators[tokenId] = payable(msg.sender);
+        return mintItemAndSetUnbundlePrice(to, tokenId, uri, _unbundlePrice);
+    }
+    function mintItem(address to, string memory uri)
+        public
+        payable
+        returns (uint256)
+    {
+        return mintItemAndSetUnbundlePrice(to, uri, 0);
     }
 
     /**
@@ -140,36 +171,32 @@ contract BundleNFT is
         return false;
     }
 
-    function allowedToRemoveNFTs(uint256 tokenId) public view returns (bool) {
-        return allowedToAddNFTs(tokenId);
+    function setAllowance(address externalContract, uint256 tokenId, bool value) public {
+        require(allowedToAddNFTs(tokenId));
+        modificationAllowances[tokenId][externalContract] = value;
+        if (value) {
+            modificationAllowancesEnumerated[tokenId].push(externalContract);
+        }
+    }
+    function hasAllowance(address externalContract, uint256 tokenId) public view returns (bool) {
+        return modificationAllowances[tokenId][externalContract];
     }
 
-    function addAllowance(address externalContract, uint256 tokenId) public {
-        require(allowedToAddNFTs(tokenId), "E02.0");
-        modificationAllowances[tokenId][externalContract] = true;
-
-        modificationAllowancesEnumerated[tokenId][modificationAllowancesLengths[tokenId]] = externalContract;
-        modificationAllowancesLengths[tokenId] += 1;
-    }
-
-    function removeAllowance(uint256 tokenId, address externalContract) public {
-        require(allowedToAddNFTs(tokenId), "E02.1");
-        modificationAllowances[tokenId][externalContract] = false;
-        // TODO: may be cleanup modificationAllowancesEnumerated. But better to keep this method cheap IMO.
-    }
 
     function removeAllAllowances(uint256 tokenId) public {
-        require(allowedToAddNFTs(tokenId), "E02.2");
+        require(allowedToAddNFTs(tokenId));
         _removeAllAllowances(tokenId);
     }
     function _removeAllAllowances(uint256 tokenId) internal {
-        uint256 totalAllowances = modificationAllowancesLengths[tokenId];
-        for (uint256 i = 0; i < totalAllowances; ) {
-            delete modificationAllowancesEnumerated[tokenId][i];
+        uint256 allAllowancesLen = modificationAllowancesEnumerated[tokenId].length;
+        for (uint256 i = 0; i < allAllowancesLen; ) {
+            modificationAllowances[tokenId][modificationAllowancesEnumerated[tokenId][i]] = false;
             unchecked {
                 ++i;
             }
         }
+        delete modificationAllowancesEnumerated[tokenId];
+
         for (uint256 i = 0; i < bundles[tokenId].length; ) {
             if (address(bundles[tokenId][i].token) == address(this)) {
                 _removeAllAllowances(bundles[tokenId][i].tokenId);
@@ -178,7 +205,6 @@ contract BundleNFT is
                 ++i;
             }
         }
-        delete modificationAllowancesLengths[tokenId];
     }
 
     // Compare tokens without TokenRole.
@@ -229,54 +255,38 @@ contract BundleNFT is
         NFT[] memory _tokens,
         string memory _tokenURI
     ) public payable override {
-        require(allowedToRemoveNFTs(_tokenId), "E02.5");
+        require(allowedToAddNFTs(_tokenId), "E02.5");
         _checkFees(RemoveFromBundleFeeCoeff);
 
-        NFT[] memory _bundle = bundles[_tokenId];
-        delete (bundles[_tokenId]);
-        uint256[] memory _newBundle = new uint256[](_bundle.length);
-        uint256 _newBundleSize = 0;
+        NFT[] storage _bundle = bundles[_tokenId];
 
         for (uint256 i = 0; i < _tokens.length; ++i) {
-            bool found = false;
-            for (uint256 j = 0; j < _bundle.length; ++j) {
+            uint256 j = 0;
+            for (; j < _bundle.length; ++j) {
                 if (isEqual(_tokens[i], _bundle[j])) {
                     require(
                         _bundle[j].role != TokenRole.Modifier &&
                             _bundle[j].role != TokenRole.Original,
                         "E03"
                     );
-                    found = true;
                     break;
                 }
             }
-            require(found, "E04");
-        }
-
-        for (uint256 i = 0; i < _bundle.length; ++i) {
-            bool shouldRemoveToken = false;
-            for (uint256 j = 0; j < _tokens.length; ++j) {
-                if (isEqual(_bundle[i], _tokens[j])) {
-                    shouldRemoveToken = true;
-                    break;
-                }
+            require(j < _bundle.length, "E04");
+            _unsetParent(_bundle[j]);
+            IERC721 token = _bundle[j].token;
+            uint256 tokenId = _bundle[j].tokenId;
+            if (j < _bundle.length - 1) {
+                _bundle[j].token = _bundle[_bundle.length-1].token;
+                _bundle[j].tokenId = _bundle[_bundle.length-1].tokenId;
+                _bundle[j].role = _bundle[_bundle.length-1].role;
             }
-            if (shouldRemoveToken) {
-                _unsetParent(_bundle[i]);
-                _bundle[i].token.safeTransferFrom(
-                    address(this),
-                    msg.sender,
-                    _bundle[i].tokenId
-                );
-            } else {
-                _newBundle[_newBundleSize] = i;
-                _newBundleSize += 1;
-            }
-        }
-        if (_newBundleSize > 0) {
-            for (uint256 i = 0; i < _newBundleSize; i++) {
-                bundles[_tokenId].push(_bundle[_newBundle[i]]); // todo: verify safety
-            }
+            _bundle.pop();
+            token.safeTransferFrom(
+                address(this),
+                msg.sender,
+                tokenId
+            );
         }
         _setTokenURI(_tokenId, _tokenURI);
     }
@@ -284,22 +294,46 @@ contract BundleNFT is
     /**
      * @dev Bundle multiple NFTs into a merged token with new content.
      */
+    function bundleWithTokenURIAndSetUnbundlePrice(NFT[] memory _tokens, string memory _tokenURI, uint256 _unbundlePrice)
+        public
+        payable
+        returns (uint256)
+    {
+        uint256 tokenId = bundleAndSetUnbundlePrice(_tokens, _unbundlePrice);
+        _setTokenURI(tokenId, _tokenURI);
+        return tokenId;
+    }
     function bundleWithTokenURI(NFT[] memory _tokens, string memory _tokenURI)
         public
         payable
         returns (uint256)
     {
-        uint256 tokenId = bundle(_tokens);
-        _setTokenURI(tokenId, _tokenURI);
-        return tokenId;
+        return bundleWithTokenURIAndSetUnbundlePrice(_tokens, _tokenURI, 0);
     }
+
 
     /**
      * @dev Disassemble a bundle token.
      */
     function unbundle(uint256 _tokenId) public payable override {
         require(ownerOf(_tokenId) == msg.sender, "E05");
-        _checkFees(UnbundleFeeCoeff);
+        uint256 remainingValue = msg.value;
+        uint256 ourFees = bundleBaseFee * UnbundleFeeCoeff;
+        require(remainingValue >= ourFees);
+
+        uint256 directPayAmount = (msg.value / denominator) * doNftShare;
+        require(remainingValue >= directPayAmount);
+        doNftWallet.transfer(directPayAmount);
+        remainingValue -= directPayAmount;
+
+        uint256 unbundleFees = unbundlePrice[_tokenId];
+        if (unbundleFees > 0) {
+            require(remainingValue >= unbundleFees);
+            payable(creators[_tokenId]).transfer(unbundleFees);
+            remainingValue -= unbundleFees;
+        }
+
+        delete unbundlePrice[_tokenId];
 
         NFT[] memory _bundle = bundles[_tokenId];
         uint256[] memory _newBundle = new uint256[](_bundle.length);
@@ -360,15 +394,6 @@ contract BundleNFT is
     }
 
     /**
-     * @dev Base URI for computing {tokenURI}. If set, the resulting URI for each
-     * token will be the concatenation of the `baseURI` and the `tokenId`. Empty
-     * by default, can be overriden in child contracts.
-     */
-    function _baseURI() internal pure override returns (string memory) {
-        return "";
-    }
-
-    /**
      * @dev Withdraw all fees to the owner address
      */
     function withdrawFees() public onlyOwner {
@@ -383,7 +408,7 @@ contract BundleNFT is
         view
         returns (NFT[] memory)
     {
-        require(_exists(_tokenId), "E06");
+        require(_exists(_tokenId));
         return bundles[_tokenId];
     }
 
@@ -419,8 +444,7 @@ contract BundleNFT is
             }
         }
         require(
-            countOriginals <= 1 && countModifiers <= countOriginals,
-            "E07"
+            countOriginals <= 1 && countModifiers <= countOriginals
         );
 
         if (
@@ -431,8 +455,7 @@ contract BundleNFT is
                 effectsAllowList.checkPermission(
                     address(_tokens[originalIndex].token),
                     address(_tokens[modifierIndex].token)
-                ),
-                "E08"
+                )
             );
         }
     }
@@ -485,7 +508,7 @@ contract BundleNFT is
     }
 
     function _checkFees(uint256 coeff) internal {
-        require(msg.value >= bundleBaseFee * coeff, "E09");
+        require(msg.value >= bundleBaseFee * coeff);
 
         uint256 amount = (msg.value / denominator) * doNftShare;
         doNftWallet.transfer(amount);
