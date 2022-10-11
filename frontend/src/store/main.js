@@ -43,6 +43,7 @@ export const useStore = defineStore('main', {
         wallets: [
             {id: 1, name: 'MetaMask', key: 'Metamask', color: '#FFFFFF', available: true},
             {id: 2, name: '1inch', key: '1inch', color: '#0E131D', available: true},
+            {id: 3, name: 'WalletConnect', key: 'walletconnect', color: '#D9ECFF', available: true},
         ],
 
         connection: {
