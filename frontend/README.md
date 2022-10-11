@@ -32,3 +32,6 @@ See [Configuration Reference](https://cli.vuejs.org/config/).
 ### run
 
     docker run --rm  -p 80:80  --name donft_char donft_char:latest
+
+### Attention
+Make allowance to edit bundle for other wallets is not possible on metis network due to issues with network. 
