@@ -15,7 +15,7 @@
         <div class="wallet__step-items">
           <div
             v-for="option in networks"
-            :key="option.key"
+            :key="option.id"
             :class="{'selected': selectedNetwork === option.id, 'na': !option.available}"
             @click="option.available? setNetwork(option.id) : null"
           >
@@ -103,11 +103,10 @@
   const isConnecting = ref(false)
 
   const submit = async () => {
-
       try{
           isConnecting.value = true
           const selected = (selectedWallet.value === '1inch')? 'walletconnect' : selectedWallet.value
-          await (await AppConnector.init(ConnectorTypes.RARIBLE)).connect(selected)
+          await (await AppConnector.init(ConnectorTypes.RARIBLE)).connect(selected, selectedNetwork.value)
       }
       catch (e) {
           console.log(e);

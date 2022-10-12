@@ -52,16 +52,16 @@ router.beforeEach(async (to, from) => {
     }
   }
 
-  // if(to.meta.requiresAdmin){
-  //   try{
-  //     const {connector} = await AppConnector.init()
-  //     await connector.isUserConnected()
-  //     return ConnectionStore.isAdmin() && true || notAdminRedirectObject
-  //   }
-  //   catch (e) {
-  //     return notAdminRedirectObject
-  //   }
-  // }
+  if(to.meta.requiresAdmin){
+    try{
+      const {connector} = await AppConnector.init()
+      await connector.isUserConnected()
+      return ConnectionStore.isAdmin() && true || notAdminRedirectObject
+    }
+    catch (e) {
+      return notAdminRedirectObject
+    }
+  }
 
   return true
 })

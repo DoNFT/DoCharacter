@@ -38,7 +38,7 @@ const AppConnector = {
         return this
     },
 
-    async connect(wallet){
+    async connect(wallet, network){
         try{
             await this.connector.isUserConnected()
             console.log('user already connected');
@@ -47,10 +47,10 @@ const AppConnector = {
         catch (e){
             console.log('user not connected');
             try{
-                return await this.connector.connectToWallet(wallet)
+                return await this.connector.connectToWallet(wallet, network)
             }
             catch(e) {
-                console.log(`Error connecting to ${wallet} `, e)
+                console.log(`Error connecting to ${wallet} - ${network} `, e)
             }
         }
         return false

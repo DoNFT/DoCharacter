@@ -26,8 +26,8 @@ class EVM {
     async init(){
         return await this.connector.init(this)
     }
-    async connectToWallet(value){
-        return await this.connector.connectToWallet(value)
+    async connectToWallet(...data){
+        return await this.connector.connectToWallet(...data)
     }
     async disconnect(){
         return await this.connector.disconnect()
@@ -122,12 +122,14 @@ class EVM {
             }
         }
         else {
-            console.log('getting contract by plain')
+            // console.log('getting contract by plain')
             const contract = new SmartContract({
                 address,
                 type: 'bundle'
             })
-            let contractObject = Formatters.contractFormat(await contract.getObjectForUser(userIdentity))
+            const plainContract = await contract.getObjectForUser(userIdentity)
+            // console.log('plainContract', plainContract)
+            let contractObject = Formatters.contractFormat(plainContract)
             contractObject.tokens = await this.addStructuresToTokenList(contractObject.tokens)
             return contractObject
         }
@@ -198,8 +200,11 @@ class EVM {
     async getWrappedTokensObjectList(contractAddress, tokenID){
         const contract = new SmartContract({
             address: contractAddress,
-            type: 'bundle'
+            // type: 'bundle'
         })
+        const contractType = await contract.setCorrectContractType()
+        if(contractType !== 'bundle') return []
+
         const wrappedTokens = await contract.getWrappedTokenList(tokenID)
         const wrappedTokenIdentities = wrappedTokens.map(token => `${token.contractAddress}:${token.tokenID}`)
         const tokenObjectList = await this.getTokenListByIdentity(wrappedTokenIdentities, false)

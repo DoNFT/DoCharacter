@@ -92,7 +92,6 @@ class SmartContract {
             //  get token ids
             let arrayOfTokens = await Promise.all([...new Array(balance)].map((_, index) => Contract.tokenOfOwnerByIndex(userIdentity, index)))
             log('[SmartContract] plain token ids', arrayOfTokens);
-            // console.warn('--0002', arrayOfTokens)
 
             //  convert them into string
             arrayOfTokens = arrayOfTokens.map(id => (typeof id === 'object')? String(id) : id)
@@ -542,11 +541,8 @@ class SmartContract {
     }
 
     async approve(forAddress, tokenID){
-        console.log('111')
         const Contract = await this._getInstance()
-        console.log(Contract, 'contract')
         const approvedFor = await this.getApproved(tokenID)
-        console.log(approvedFor, 'approvedFor')
         if(approvedFor && stringCompare(approvedFor, forAddress)) return
         try{
             const tx = await Contract.approve(forAddress, tokenID)
@@ -632,7 +628,12 @@ class SmartContract {
     }
 
     async removeContractFromWhiteList(contractAddress){
-        return await this.callMethod('removeFromList', contractAddress)
+        return await this.callMethod('removeFromList', contractAddress,
+            // {
+            //     gasLimit: 1000000
+            //     // gasLimit: ethers.utils.hexlify(1000000)
+            // }
+        )
     }
 
     /*
@@ -643,6 +644,11 @@ class SmartContract {
         return await Contract.checkPermission(applyToContract, modifyWithContract)
     }
 
+    async setCorrectContractType(){
+        await this._getInstance()
+        return this._type
+    }
+
     async _getInstance(){
         if(!this._instance){
             this._instance = await new Promise( async (resolve) => {
@@ -650,47 +656,20 @@ class SmartContract {
                 if(this._type === 'bundle') abi = TokensABI.bundle.ABI
                 else if(this._type === 'allowList') abi = TokensABI.whiteList.ABI
                 else abi = TokensABI.default.ABI
-                const contract = new Contract(this._address, abi, this._getProvider())
+                let contract = new Contract(this._address, abi, this._getProvider())
 
-                // console.log(contract['mintItem(address,string)']);
-
-                // contract['mintItem(address,string)'] = new Proxy(contract, {
-                //     apply(target, thisArg, args) {
-                //         console.warn('-----apply mintItem-----')
-                //         console.warn(target, thisArg, args)
-                //         return target.apply(thisArg, args)
-                //         /*if (prop in target) {
-                //             return target[prop];
-                //         } else {
-                //             return 0; // значение по умолчанию
-                //         }*/
-                //     }
-                // })
-
-                // const proxy = new Proxy(contract, {
-                //     get(target, property, receiver){
-                //         console.warn('-----get-----', property)
-                //         // console.warn(target)
-                //         // console.warn(property)
-                //         // console.warn(receiver)
-                //         // console.warn(target[property])
-                //         // return target.apply(property)
-                //         target[property].bind(target)
-                //         return target[property]
-                //     },
-                //     /*apply(target, thisArg, args) {
-                //         console.warn('-----apply-----')
-                //         console.warn(target, thisArg, args)
-                //         return target.apply(thisArg, args)
-                //         /*if (prop in target) {
-                //             return target[prop];
-                //         } else {
-                //             return 0; // значение по умолчанию
-                //         }*-/
-                //     }*/
-                // })
-
-                // resolve(proxy)
+                try{
+                    const isBundle = await contract.supportsInterface(process.env.VUE_APP_BUNDLE_INTERFACE_ID)
+                    if (isBundle && this._type !== 'bundle') {
+                        this._type = 'bundle'
+                        contract = new Contract(this._address, TokensABI.bundle.ABI, this._getProvider())
+                    }
+                    else if (!isBundle && this._type !== 'allowList') {
+                        this._type = 'common'
+                        contract = new Contract(this._address, TokensABI.default.ABI, this._getProvider())
+                    }
+                }
+                catch (e) {}
                 resolve(contract)
             })
         }
@@ -698,6 +677,7 @@ class SmartContract {
     }
 
     async _trnBaseParams(forMethod){
+        if (this._type !== 'bundle') return {}
         const payMethods = {
             'mintItem(address,string)': 'MintFeeCoeff',
             'bundleWithTokenURI': 'CreateBundleFeeCoeff',
@@ -709,21 +689,25 @@ class SmartContract {
             const Contract = await this._getInstance()
 
             // only if contract accept
-            if(Contract.bundleBaseFee && Contract.MintFeeCoeff){
-                const baseFee = await Contract.bundleBaseFee()
-                const feeCoeff = await Contract[payMethods[forMethod]]()
-                const resultFee = +baseFee * +feeCoeff + ''
-                return {
-                    value: resultFee
+            try{
+                if(Contract.bundleBaseFee && Contract.MintFeeCoeff){
+                    const baseFee = await Contract.bundleBaseFee()
+                    const feeCoeff = await Contract[payMethods[forMethod]]()
+                    const resultFee = +baseFee * +feeCoeff + ''
+                    return {
+                        value: resultFee
+                    }
                 }
+            }
+            catch (e) {
+                log(`Contract ${this._address} dont support bundle interface`)
             }
         }
         return {}
     }
 
     _getProvider(){
-        if(!this._provider) this._provider = ConnectionStore.getProvider();
-        return this._provider
+        return ConnectionStore.getProvider()
     }
 
 }
