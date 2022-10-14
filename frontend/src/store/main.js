@@ -30,20 +30,6 @@ export const useStore = defineStore('main', {
         walletConnectCloseHandler: null,
 
         networks: availableNetworks,
-        //     [
-        //     {id: 1, name: 'Ethereum', key: 'ether', color: '#627EEA', available: true},
-        //     {id: 2, name: 'Mumbai testnet', key: 'polygon', color: '#8247E5', available: true},
-        //     {id: 3, name: 'Matic mainnet', key: 'polygon', color: '#8247E5', available: true},
-        //     {id: 4, name: 'Cronos', key: 'cronos', color: '#8247E5', available: true},
-        //     {id: 5, name: 'Gnosis/sokol', key: 'gnosis', color: '#8247E5', available: true},
-        //     {id: 6, name: 'NEON', key: 'neon', color: '#8247E5', available: true},
-        //     {id: 7, name: 'Skale', key: 'skale', color: '#8247E5', available: true},
-        //     {id: 8, name: 'BSC', key: 'bsc', color: '#8247E5', available: true},
-        //     {id: 9, name: 'Near', key: 'near', color: '#8247E5', available: true},
-        //     {id: 10, name: 'Metis', key: 'metis', color: '#8247E5', available: true},
-        //     // {id: 3, name: 'Optimizm', key: 'optimizm', color: '#8247E5', available: true},
-        //     // {id: 3, name: 'Skale', key: 'skale', color: '#8247E5', available: true},
-        // ],
         wallets: [
             {id: 1, name: 'MetaMask', key: 'Metamask', color: '#FFFFFF', available: true},
             {id: 2, name: '1inch', key: '1inch', color: '#0E131D', available: true},

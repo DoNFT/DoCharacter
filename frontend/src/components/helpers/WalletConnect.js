@@ -11,10 +11,10 @@ export function useWalletConnection(){
         wallets: walletOptions
     } = storeToRefs(store);
 
-    const network = ref('ether')
+    const network = ref(null)
     const wallet = ref(null)
     watch(network, (newValue) => {
-        if(newValue === 'near') wallet.value = null
+        if(newValue === 0) wallet.value = null
     })
 
     const filteredNetworkOptions = computed(() => {
@@ -22,7 +22,7 @@ export function useWalletConnection(){
             let available = false
             if(networkItem.available){
                 if(wallet.value === 'ledger'){
-                    if(networkItem.key !== 'near' && networkItem.key !== 'evm') available = true
+                    if(networkItem.key !== 0) available = true
                 }
                 else available = true
             }
@@ -35,10 +35,8 @@ export function useWalletConnection(){
         return [...walletOptions.value].map(w => ({...w})).map((wallet) => {
             let available = false
             if(wallet.available){
-                if(network.value === 'evm'){
-                    if(wallet.key !== 'ledger') available = true
-                }
-                else available = network.value !== 'near';
+                // wallet selection not available for near network
+                available = network.value !== 0;
             }
             wallet.available = available
             return wallet
@@ -49,7 +47,7 @@ export function useWalletConnection(){
 
     const submitAvailable = computed(() => {
         if(!network.value) return
-        if(network.value !== 'near') return wallet.value
+        if(network.value !== 0) return wallet.value
         else return !wallet.value
     })
 

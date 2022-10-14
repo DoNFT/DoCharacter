@@ -168,10 +168,6 @@ export function getAvailableNetworks() {
                 meta.title &&
                 (meta.chainId || meta.image === 'near') &&
                 contracts.whiteListContract &&
-                // contracts.characterContract &&
-                // contracts.thingContract &&
-                // contracts.colorContract &&
-                // contracts.achievements &&
                 contracts.adminAddress
         })
         .map(([name, {meta: {title, image, chainId}}], index) => ({

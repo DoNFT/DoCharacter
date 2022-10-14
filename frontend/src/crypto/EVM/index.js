@@ -199,7 +199,6 @@ class EVM {
     async getWrappedTokensObjectList(contractAddress, tokenID){
         const contract = new SmartContract({
             address: contractAddress,
-            // type: 'bundle'
         })
         const contractType = await contract.setCorrectContractType()
         if(contractType !== 'bundle') return []
@@ -247,32 +246,6 @@ class EVM {
         }
         finally {
             storage.changeContractUpdating(contractAddress, false)
-        }
-    }
-
-    // @param assetType: string 'things' || 'colors'
-    async applyAssetsToToken_old(original, modifiers, assetType = 'things'){
-        console.log('applyAssetsToToken', original, modifiers);
-
-        const {url, blob} = await Token.applyAssets(original, modifiers, assetType)
-
-        const metaCID = DecentralizedStorage.loadJSON({
-            name: original.name,
-            description: original.description,
-            link: original.link,
-            image: url
-        })
-
-        const tokensForBundleIdentity = modifiers.map(token => token.identity)
-        const tokenIdentityObjectList = Token.transformIdentitiesToObjects(tokensForBundleIdentity)
-        const tokensForBundle = Token.addTokenRole(tokenIdentityObjectList)
-
-        return {
-            contractAddress: original.contractAddress,
-            tokensForBundle,
-            tokensForBundleIdentity,
-            metaCID,
-            tempImage: blob
         }
     }
 
@@ -577,14 +550,10 @@ class EVM {
     }
 
     async sendNFT(tokenObject, toAddressPlain) {
-        console.log('sendNFT', tokenObject, toAddressPlain);
-
         const {realAddress: toAddress} = await this.checkForENSName(toAddressPlain)
         const [contractAddress, tokenID] = tokenObject.identity.split(':')
         const fromAddress = ConnectionStore.getUserIdentity()
         if(stringCompare(fromAddress, toAddress)) throw Error('THE_SAME_ADDRESS_ERROR')
-
-        console.log(`[Send NFT] contract: ${contractAddress}, token: ${tokenID}, from: ${fromAddress}, to: ${toAddress}`)
 
         const Contract = new SmartContract({
             address: contractAddress
