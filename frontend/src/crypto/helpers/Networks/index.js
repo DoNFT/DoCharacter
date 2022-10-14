@@ -72,11 +72,7 @@ const networks = {
             gasLimit: 400000
         },
         contracts: {
-            characterContract: '0xB62C4Ac91b2cAA1D002350A69934c394d4DA2283',
-            thingContract: '0xeaE16eB54D9A2fd0a76BBD879539C2EC038cE2d1',
-            colorContract: '0x48e24d6a6bbaacf6256e7948c9e16601a4f521b8',
-            achievements: '0x8c35ebf867323af8246953e99be8a4d5709a19a0',
-            whiteListContract: '0x3b3c5c0e75163e89968300a077d45f69212d1beb',
+            whiteListContract: '0x9b992210d6a9b907e2db4307a924a5ec5f09c9ba',
             adminAddress: '0xD25A41039DEfD7c7F0fBF6Db3D1Df60b232c6067',
         }
     },
@@ -92,11 +88,7 @@ const networks = {
             gasLimit: 400000
         },
         contracts: {
-            characterContract: '0x55181Ea172ED9205252D559D782bA18488461303',
-            thingContract: '0xd4B754464c4C0Ea996C468A7e2B7E41Cc9494E40',
-            colorContract: '0x458d5e59BA0590AfDFE1A55226Bd751C7a87477a',
-            achievements: '0x2F0689f3bCEF57BeD577310e1c4f1275BE15394a',
-            whiteListContract: '0x91b3Bcb5cb609CF307cb365124753a6Fb3bcC58A',
+            whiteListContract: '0xdaefb30a240251deaf13afafaad6b83980cfd783',
             adminAddress: '0xD25A41039DEfD7c7F0fBF6Db3D1Df60b232c6067',
         }
     },
@@ -111,11 +103,7 @@ const networks = {
             marketplaceExplorer: (contractAddress, tokenID) => ``,
         },
         contracts: {
-            characterContract: '0x55181ea172ed9205252d559d782ba18488461303',
-            thingContract: '0xd4B754464c4C0Ea996C468A7e2B7E41Cc9494E40',
-            colorContract: '0x2F0689f3bCEF57BeD577310e1c4f1275BE15394a',
-            achievements: '0x91b3Bcb5cb609CF307cb365124753a6Fb3bcC58A',
-            whiteListContract: '0xdD3610C4c9638d44329c10E23c835754f36D862d',
+            whiteListContract: '0x70cb8b66725b0a2356abd882fe73940a3835608e',
             adminAddress: '0xD25A41039DEfD7c7F0fBF6Db3D1Df60b232c6067',
         }
     },
@@ -131,11 +119,7 @@ const networks = {
             gasLimit: 400000
         },
         contracts: {
-            characterContract: '0xC62aceB4E3ADf93a184433Ccc86BF0852bcaDdF3',
-            thingContract: '0x07e853a4191057ac17ae8c37c13577c77b726ae3',
-            colorContract: '0x074809423c7c155b0781a97c3efca62c8b9770f3',
-            achievements: '0xb050889270daf80bee1fe041439bf312d1db6449',
-            whiteListContract: '0x062044f74a978799cfb2101ccfbc5cdbafbc14f0',
+            whiteListContract: '0xe8ef4c01c078452221b902226aecea6664a1f554',
             adminAddress: '0x7bBc0e7a47857Bf0154FbAccBcbdd3079280955E',
         }
     },
@@ -151,12 +135,8 @@ const networks = {
             gasLimit: 400000
         },
         contracts: {
-            characterContract: '0x4438797659A677C249ae58427D013C15d2A4FA5A',
-            thingContract: '0x438CE1e9A3701fe9012dAB7Ce42D073ED86d2e4B',
-            colorContract: '0x2Ccb9a2B36F997A64466b4eD4229C635F9bB53ac',
-            achievements: '0xE13D87772b6D728D84c32D971A62D930A804e70F',
-            whiteListContract: '0x6d16BD9F0320F284225e9E634495a1f03Fc7e5B8',
-            adminAddress: '0xB9f48fd8fdA9c353a61c34AC9F2feA35A9AB3eeA',
+            whiteListContract: '0x70cb8b66725b0a2356abd882fe73940a3835608e',
+            adminAddress: '0xD25A41039DEfD7c7F0fBF6Db3D1Df60b232c6067',
         }
     },
     near_testnet: {

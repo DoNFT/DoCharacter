@@ -445,12 +445,21 @@ class SmartContract {
         }
     }
 
+    async checkPermissionToModifyBundle(tokenId) {
+        const Contract = await this._getInstance()
+        const isAllowed = await Contract.allowedToAddNFTs(tokenId)
+        if(!isAllowed) throw Error(ErrorList.HAVE_NOT_PERMISSION)
+        return true
+    }
+
     async removeFromBundle(fromTokenID, tokenList, resultTokenCID){
+        await this.checkPermissionToModifyBundle(fromTokenID)
         const trnParams = await this._trnBaseParams('removeNFTsFromBundle')
         return await this.callMethod('removeNFTsFromBundle', fromTokenID, tokenList, resultTokenCID, trnParams)
     }
 
     async addToBundle(addToTokenID, tokenList, resultTokenCID){
+        await this.checkPermissionToModifyBundle(addToTokenID)
         const trnParams = await this._trnBaseParams('addNFTsToBundle')
         return await this.callMethod('addNFTsToBundle', addToTokenID, tokenList, resultTokenCID, trnParams)
     }
@@ -557,10 +566,10 @@ class SmartContract {
 
     async addAllowance(forAddress, tokenID){
         const Contract = await this._getInstance()
-        const approvedFor = await this.getApproved(tokenID)
-        if(approvedFor && stringCompare(approvedFor, forAddress)) return
+        const isAlreadyAllowed = await Contract.hasAllowance(forAddress, tokenID)
+        if(isAlreadyAllowed) return
         try{
-            const tx = await Contract.addAllowance(forAddress, tokenID)
+            const tx = await Contract.setAllowance(forAddress, tokenID, true)
             return await tx.wait()
         }
         catch (e){
@@ -628,10 +637,11 @@ class SmartContract {
     }
 
     async removeContractFromWhiteList(contractAddress){
-        return await this.callMethod('removeFromList', contractAddress,
+        return await this.callMethod('removeFromList', contractAddress
+            // ,
             // {
-            //     gasLimit: 1000000
-            //     // gasLimit: ethers.utils.hexlify(1000000)
+            //     gasLimit: 10000000
+            //     // gasLimit: ethers.utils.hexlify(10000000)
             // }
         )
     }

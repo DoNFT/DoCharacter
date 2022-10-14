@@ -4,9 +4,6 @@ FROM node:lts as build-stage
 #RUN apk add --no-cache git
 WORKDIR /app
 COPY package*.json ./
-#COPY yarn.lock ./
-
-
 RUN npm install
 COPY . .
 RUN npm run build

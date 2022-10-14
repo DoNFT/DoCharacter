@@ -122,13 +122,12 @@ class EVM {
             }
         }
         else {
-            // console.log('getting contract by plain')
+            console.log('getting contract by plain')
             const contract = new SmartContract({
                 address,
                 type: 'bundle'
             })
             const plainContract = await contract.getObjectForUser(userIdentity)
-            // console.log('plainContract', plainContract)
             let contractObject = Formatters.contractFormat(plainContract)
             contractObject.tokens = await this.addStructuresToTokenList(contractObject.tokens)
             return contractObject
@@ -618,6 +617,7 @@ class EVM {
             address: contractAddress,
             type: 'bundle'
         })
+
         const trnResult = await Contract.addAllowance(forAddress, tokenID)
         if(!trnResult) throw Error('ALREADY_ALLOWED')
         return trnResult
