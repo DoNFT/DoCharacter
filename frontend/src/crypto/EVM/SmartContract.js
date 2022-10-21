@@ -390,7 +390,6 @@ class SmartContract {
 
     async mint(userIdentity, metaCID){
         const Contract = await this._getInstance()
-        const {gasLimit} = Networks.getData(ConnectionStore.getNetwork().name)
         try{
             const trnParams = await this._trnBaseParams('mintItem(address,string)')
             const transactionResult = await Contract['mintItem(address,string)'](userIdentity, metaCID, trnParams)

@@ -41,8 +41,8 @@ const networks = {
             gasLimit: 400000
         },
         contracts: {
-            whiteListContract: '0x949084f627840bF23CAB88252613D7553d7A774D',
-            adminAddress: '0xD25A41039DEfD7c7F0fBF6Db3D1Df60b232c6067',
+            whiteListContract: '',
+            adminAddress: '',
         }
     },
     metis_testnet: {

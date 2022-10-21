@@ -153,7 +153,6 @@ export default {
                 this._connectedOptions.address = connection.address
                 this._connectedOptions.provider = connection.wallet.ethereum.config.web3.currentProvider
                 this._connectedOptions.wallet = connection.wallet
-                console.log('connection options', this._connectedOptions)
 
                 const updateUserTokensAction = () => {
                     router.push({name: 'Characters'})
