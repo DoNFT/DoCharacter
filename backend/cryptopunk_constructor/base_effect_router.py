@@ -11,7 +11,7 @@ from fastapi import responses
 from cryptopunk_constructor.cryptopunk_constructor_effect_service import CryptopunkConstructorEffectService
 from eth.service import get_service_cls
 from ipfs.service import IPFSServiceException
-from ipfs.service import get_ipfs_service
+from ipfs.service import wrapper_ipfs_service
 from settings import ETH_NODE
 from settings import IPFS_API_TIMEOUT
 from settings import IPFS_SERVICE
@@ -19,7 +19,9 @@ from settings import NFT_STORAGE_API_TOKEN
 
 web3_service = get_service_cls()(ETH_NODE)
 service = CryptopunkConstructorEffectService()
-ipfs_service = get_ipfs_service(IPFS_API_TIMEOUT, IPFS_SERVICE, NFT_STORAGE_API_TOKEN)
+wrapper_ipfs_service.init(IPFS_API_TIMEOUT, IPFS_SERVICE, NFT_STORAGE_API_TOKEN)
+ipfs_service = wrapper_ipfs_service.get_ipfs_service()
+ipfs_router = wrapper_ipfs_service.get_router()
 
 
 class GenerationImageError(Exception):
