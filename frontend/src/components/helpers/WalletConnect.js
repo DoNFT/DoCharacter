@@ -51,7 +51,8 @@ export function useWalletConnection(){
         else return !wallet.value
     })
 
-    const isOpen = computed(() => !connection.value.userIdentity)
+    const isOpen = computed(() => !connection.value.userIdentity);
+
     return {
         isOpen,
         networks: filteredNetworkOptions,
@@ -60,7 +61,7 @@ export function useWalletConnection(){
         selectedWallet: wallet,
         networkAssets,
         close: () => {
-            // can`t close
+            store.onLoginPageModalChange(false)
         },
         setNetwork: value => {
             network.value = value

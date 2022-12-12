@@ -1,24 +1,22 @@
 <template>
-    <div>
-    <template v-if="isAppReady">
-        <router-view/>
+  <template v-if="isAppReady">
+      <router-view/>
 
-        <ManageContracts/>
-        <ChooseWalletModal/>
-        <DeployContractModal/>
-        <FindTokenModal/>
-        <AddToWhiteList/>
-        <LimitOrderModal/>
+      <ManageContracts/>
+      <ChooseWalletModal/>
+      <DeployContractModal/>
+      <FindTokenModal/>
+      <AddToWhiteList/>
+      <LimitOrderModal/>
 
-        <TransactionViewModal/>
+      <TransactionViewModal/>
 
-        <ConfirmModal/>
-        <AlertModal/>
-    </template>
-    <LoaderElement v-else class="absolute with-bg"/>
+      <ConfirmModal/>
+      <AlertModal/>
+  </template>
+  <LoaderElement v-else class="absolute with-bg"/>
 
-    <WalletConnectQRModal/>
-    </div>
+  <WalletConnectQRModal/>
 </template>
 
 <script setup>

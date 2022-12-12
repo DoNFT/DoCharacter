@@ -1,40 +1,66 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Gallery from '../views/Gallery.vue'
+import Login from '../views/Login.vue'
 import TokenDetail from '../views/TokenDetail.vue'
 import Admin from '../views/Admin.vue'
 import AppConnector from "@/crypto/AppConnector";
-import {ConnectionStore} from "@/crypto/helpers";
 
 const routes = [
   {
     path: '/',
     name: 'Characters',
-    component: Gallery
+    component: Gallery,
+    meta: {
+      requiresAuth: true
+    },
   },
   {
     path: '/things',
     name: 'Things',
-    component: Gallery
+    component: Gallery,
+    meta: {
+      requiresAuth: true
+    },
   },
   {
     path: '/colors',
     name: 'Colors',
-    component: Gallery
+    component: Gallery,
+    meta: {
+      requiresAuth: true
+    },
   },
   {
     path: '/achievements',
     name: 'Achievements',
-    component: Gallery
+    component: Gallery,
+    meta: {
+      requiresAuth: true
+    },
   },
   {
     path: '/asset/:contractAddress/:tokenID',
     name: 'TokenDetail',
-    component: TokenDetail
+    component: TokenDetail,
+    meta: {
+      requiresAuth: true
+    },
   },
   {
     path: '/admin',
     name: 'Admin',
     component: Admin,
+    meta: {
+      requiresAuth: true
+    },
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login,
+    meta: {
+
+    },
   },
 ]
 
@@ -45,21 +71,20 @@ const router = createRouter({
 
 router.beforeEach(async (to, from) => {
 
-  const notAdminRedirectObject = {
-    name: 'Characters',
+  const notAuthRedirectObject = {
+    name: 'Login',
     query: {
-      admin_role_required: true,
+      auth_required: true,
     }
   }
 
-  if(to.meta.requiresAdmin){
+  if(to.meta.requiresAuth){
     try{
       const {connector} = await AppConnector.init()
-      await connector.isUserConnected()
-      return ConnectionStore.isAdmin() && true || notAdminRedirectObject
+      return await connector.isUserConnected() && true || notAuthRedirectObject
     }
     catch (e) {
-      return notAdminRedirectObject
+      return notAuthRedirectObject
     }
   }
 

@@ -328,7 +328,9 @@ export const useStore = defineStore('main', {
 
         whiteList: [],
         isWhiteListLoading: false,
-        isAddToWhiteListOpen: false
+        isAddToWhiteListOpen: false,
+
+        walletConnectModalOpen: true
     }),
     getters: {
         getCollections: state => state.collections,
@@ -405,6 +407,9 @@ export const useStore = defineStore('main', {
         }
     },
     actions: {
+        onLoginPageModalChange(value){
+            this.walletConnectModalOpen = value
+        },
         changeWhiteListLoadingState(value){
             this.isWhiteListLoading = value
         },
