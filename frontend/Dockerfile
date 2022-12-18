@@ -1,5 +1,5 @@
 # build stage
-FROM node:lts as build-stage
+FROM node:16-alpine as build-stage
 #FROM node:17.1.0 as build-stage
 #RUN apk add --no-cache git
 WORKDIR /app
