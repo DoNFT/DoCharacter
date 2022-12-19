@@ -80,13 +80,15 @@
   import {ConnectorTypes} from '@/crypto/helpers'
   import {useStore} from "@/store/main";
   import {storeToRefs} from "pinia";
-  import {useRouter} from "vue-router";
+  import {useRoute, useRouter} from "vue-router";
 
   const store = useStore()
   const {
     walletConnectModalOpen
   } = storeToRefs(store)
 
+  const router = useRouter()
+  const route = useRoute()
   const {
       isOpen,
       networks,
@@ -112,15 +114,18 @@
 
   const submit = async () => {
       try{
-          isConnecting.value = true
-          const selected = (selectedWallet.value === '1inch')? 'walletconnect' : selectedWallet.value
-          await (await AppConnector.init(ConnectorTypes.RARIBLE)).connect(selected, selectedNetwork.value)
+        isConnecting.value = true
+        const selected = (selectedWallet.value === '1inch')? 'walletconnect' : selectedWallet.value
+        await (await AppConnector.init(ConnectorTypes.RARIBLE)).connect(selected, selectedNetwork.value)
+
+        const heedRedirect = route.query && route.query.redirect || '/'
+        await router.push({path: heedRedirect})
       }
       catch (e) {
-          console.log(e);
+        console.log(e);
       }
       finally {
-          isConnecting.value = false
+        isConnecting.value = false
       }
   }
 
@@ -128,7 +133,6 @@
     withoutClose: true
   })
 
-  const router = useRouter()
   watchEffect(() => {
     modalOptions.withoutClose = router.currentRoute.value.name !== 'Login'
   })
