@@ -12,6 +12,7 @@ from cryptopunk_constructor.cryptopunk_constructor_effect_service import Cryptop
 from eth.service import get_service_cls
 from ipfs.service import IPFSServiceException
 from ipfs.service import wrapper_ipfs_service
+from ipfs.service import IPFSServiceEnum
 from settings import ETH_NODE
 from settings import IPFS_API_HOST
 from settings import IPFS_API_TIMEOUT
@@ -19,9 +20,18 @@ from settings import IPFS_PROJECT_ID
 from settings import IPFS_PROJECT_SECRET
 from settings import IPFS_SERVICE
 
+from settings import NFT_STORAGE_API_TOKEN
+from settings import PINATA_JWT_TOKEN
+
 web3_service = get_service_cls()(ETH_NODE)
 service = CryptopunkConstructorEffectService()
-wrapper_ipfs_service.init(IPFS_API_TIMEOUT, IPFS_SERVICE, (IPFS_API_HOST, IPFS_PROJECT_ID, IPFS_PROJECT_SECRET))
+if IPFS_SERVICE == IPFSServiceEnum.IPFS:
+    wrapper_ipfs_service.init(IPFS_API_TIMEOUT, IPFS_SERVICE, (IPFS_API_HOST, IPFS_PROJECT_ID, IPFS_PROJECT_SECRET))
+elif IPFS_SERVICE == IPFSServiceEnum.NFT_STORAGE:
+    wrapper_ipfs_service.init(IPFS_API_TIMEOUT, IPFS_SERVICE, NFT_STORAGE_API_TOKEN)
+elif IPFS_SERVICE == IPFSServiceEnum.PINATA:
+    wrapper_ipfs_service.init(IPFS_API_TIMEOUT, IPFS_SERVICE, PINATA_JWT_TOKEN)
+# wrapper_ipfs_service.init(IPFS_API_TIMEOUT, IPFS_SERVICE, (IPFS_API_HOST, IPFS_PROJECT_ID, IPFS_PROJECT_SECRET))
 ipfs_service = wrapper_ipfs_service.get_ipfs_service()
 ipfs_router = wrapper_ipfs_service.get_router()
 
